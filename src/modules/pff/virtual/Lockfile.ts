@@ -1,6 +1,11 @@
-import { outputFile, readFile } from "fs-extra";
+import {
+  closeFile,
+  isFileExist,
+  openFile,
+  readFile,
+  writeFile,
+} from "../../../impl/ClicornAPI";
 import { basicHash } from "../../commons/BasicHash";
-import { isFileExist } from "../../commons/FileUtil";
 import { getBoolean } from "../../config/ConfigSupport";
 import { MinecraftContainer } from "../../container/MinecraftContainer";
 import { ModArtifact, ModMeta } from "./ModDefine";
@@ -17,17 +22,23 @@ export async function loadLockfile(
   try {
     const lockPath = container.getPff2LockFile();
     if (await isFileExist(lockPath)) {
-      const f = await readFile(lockPath);
+      const fd = await openFile(lockPath, "r");
+      const f = await readFile(fd);
+      await closeFile(fd);
       try {
         const l = JSON.parse(f.toString());
         await fixLockfile(l, container);
         return l;
       } catch {
-        await outputFile(lockPath, "{}", { mode: 0o777 });
+        const fd = await openFile(lockPath, "w");
+        await writeFile(fd, Buffer.from("{}"));
+        await closeFile(fd);
         return {};
       }
     } else {
-      await outputFile(lockPath, "{}", { mode: 0o777 });
+      const fd = await openFile(lockPath, "w");
+      await writeFile(fd,  Buffer.from("{}"));
+      await closeFile(fd);
       return {};
     }
   } catch {
@@ -58,11 +69,9 @@ export async function saveLockfile(
   container: MinecraftContainer
 ): Promise<void> {
   try {
-    await outputFile(
-      container.getPff2LockFile(),
-      JSON.stringify(lockfile, null, 2),
-      { mode: 0o777 }
-    );
+    const fd = await openFile(container.getPff2LockFile(), "w");
+    await writeFile(fd, Buffer.from(JSON.stringify(lockfile, null, 2)));
+    await closeFile(fd);
   } catch {}
 }
 

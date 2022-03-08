@@ -13,10 +13,10 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { remove } from "fs-extra";
-import objectHash from "object-hash";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { remove } from "../impl/ClicornAPI";
+import { basicHash } from "../modules/commons/BasicHash";
 import { scanCoresInAllMountedContainers } from "../modules/container/ContainerScanner";
 import { getContainer } from "../modules/container/ContainerUtil";
 import {
@@ -134,8 +134,8 @@ function CoresDisplay(props: { server?: string }): JSX.Element {
         }
         if (mountedBit.current) {
           cachedAllCores.sort((a, b) => {
-            const hashA = objectHash(a);
-            const hashB = objectHash(b);
+            const hashA = basicHash(JSON.stringify(a));
+            const hashB = basicHash(JSON.stringify(b));
             const pinA = getUsed(hashA);
             const pinB = getUsed(hashB);
             const timeA = getMarkTime(hashA);
@@ -276,7 +276,7 @@ function SingleCoreDisplay(props: {
   refresh: () => unknown;
 }): JSX.Element {
   const classes = useCardStyles();
-  const hash = objectHash(props.profile);
+  const hash = basicHash(JSON.stringify(props.profile));
   const used = getUsed(hash);
   const [warningOpen, setWarningOpen] = useState(false);
   const [toDestroy, setDestroy] = useState<string>();
@@ -524,7 +524,7 @@ function SingleCoreDisplay(props: {
               try {
                 setDirtyProfile(props.profile.container, props.profile.id);
                 await remove(
-                  getContainer(props.profile.container).getVersionRoot(
+                  getContainer(props.profile.container).getProfilePath(
                     toDestroy
                   )
                 );

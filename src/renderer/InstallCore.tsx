@@ -12,44 +12,37 @@ import {
   Tab,
   Tabs,
   ThemeProvider,
-  Typography
+  Typography,
 } from "@mui/material";
-import { EventEmitter } from "events";
 import React, { useEffect, useRef, useState } from "react";
 import { throttle } from "throttle-debounce";
+import { EventEmitter } from "../impl/EventEmitter";
 import { ALICORN_SEPARATOR, ReleaseType } from "../modules/commons/Constants";
 import { isNull } from "../modules/commons/Null";
 import { scanCoresInAllMountedContainers } from "../modules/container/ContainerScanner";
 import {
   getAllMounted,
-  getContainer
+  getContainer,
 } from "../modules/container/ContainerUtil";
 import {
   clearDoing,
   getDoing,
   subscribeDoing,
-  unsubscribeDoing
+  unsubscribeDoing,
 } from "../modules/download/DownloadWrapper";
 import { getDefaultJavaHome, getJavaRunnable } from "../modules/java/JavaInfo";
 import {
   canSupportGame,
   getFabricInstaller,
   getLatestFabricInstallerAndLoader,
-  removeFabricInstaller
+  removeFabricInstaller,
 } from "../modules/pff/get/FabricGet";
-import {
-  generateForgeInstallerName,
-  getForgeInstaller,
-  getForgeVersionByMojang,
-  removeForgeInstaller
-} from "../modules/pff/get/ForgeGet";
 import {
   downloadProfile,
   getAllMojangCores,
-  getProfileURLById
+  getProfileURLById,
 } from "../modules/pff/get/MojangCore";
 import { performFabricInstall } from "../modules/pff/install/FabricInstall";
-import { performForgeInstall } from "../modules/pff/install/ForgeInstall";
 import { loadProfile } from "../modules/profile/ProfileLoader";
 import { ProfileType, whatProfile } from "../modules/profile/WhatProfile";
 import { jumpTo, setChangePageWarn, triggerSetPage } from "./GoTo";
@@ -61,7 +54,7 @@ import { pffInstall } from "./PffFront";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
-  isBgDark
+  isBgDark,
 } from "./Renderer";
 import { useFormStyles } from "./Stylex";
 import { tr } from "./Translator";
@@ -79,16 +72,13 @@ export function InstallCore(): JSX.Element {
   );
   const [patchableCores, setPatchableCores] = useState<PatchableCore[]>([]);
   const [fabricCores, setFabricCores] = useState<PatchableCore[]>([]);
-  const [baseMojangVersionForge, setBaseMojangVersionForge] =
-    useState<string>("");
+  useState<string>("");
   const [failedMsg, setFailedMsg] = useState<string>("Untracked Error");
   const [baseMojangVersionFabric, setBaseMojangVersionFabric] =
     useState<string>("");
-  const [detectedForgeVersion, setDetectedForgeVersion] = useState("");
   const [detectedFabricVersion, setDetectedFabricVersion] =
     useState<string>("");
   const [selectedMojangContainer, setMojangContainer] = useState("");
-  const [selectedForgeContainer, setForgeContainer] = useState("");
   const [selectedFabricContainer, setFabricContainer] = useState("");
   const [operating, setOperating] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -131,14 +121,6 @@ export function InstallCore(): JSX.Element {
       mounted.current = false;
     };
   });
-  useEffect(() => {
-    void (async () => {
-      const lForge = await getForgeVersionByMojang(baseMojangVersionForge);
-      if (mounted.current) {
-        setDetectedForgeVersion(lForge);
-      }
-    })();
-  }, [baseMojangVersionForge]);
   useEffect(() => {
     void (async () => {
       if (!(await canSupportGame(baseMojangVersionFabric))) {
@@ -210,24 +192,6 @@ export function InstallCore(): JSX.Element {
                   <Grid item>
                     <Typography color={"primary"} sx={{ marginLeft: "0.3rem" }}>
                       {tr("InstallCore.InstallMinecraft")}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              }
-            />
-            <Tab
-              label={
-                <Grid container direction="row" alignItems="center">
-                  <Grid item>
-                    <Avatar
-                      variant={"square"}
-                      sx={{ width: "2rem", height: "2rem" }}
-                      src={Icons.PROFILE_FORGE}
-                    />
-                  </Grid>
-                  <Grid item>
-                    <Typography color={"primary"} sx={{ marginLeft: "0.3rem" }}>
-                      {tr("InstallCore.InstallForge")}
                     </Typography>
                   </Grid>
                 </Grid>
@@ -435,131 +399,8 @@ export function InstallCore(): JSX.Element {
               </Button>
             </FormControl>
           </TabPanel>
-          {/* Forge */}
-          <TabPanel value={tabValue} index={1}>
-            <FormControl fullWidth>
-              <Typography className={classes.instr}>
-                {tr("InstallCore.InstallForgeInstr")}
-              </Typography>
-              <Typography className={classes.text} color={"secondary"}>
-                {tr("InstallCore.ForgeVersion") +
-                  " " +
-                  (detectedForgeVersion || tr("InstallCore.Unknown"))}
-              </Typography>
-              <br />
-              <FormControl variant={"outlined"} className={classes.formControl}>
-                <InputLabel
-                  id={"CoreInstall-Forge-SelectBase"}
-                  className={classes.label}
-                >
-                  {tr("InstallCore.ForgeBaseVersion")}
-                </InputLabel>
-                <Select
-                  sx={{ color: "primary.main" }}
-                  startAdornment={<Inventory2 />}
-                  label={tr("InstallCore.ForgeBaseVersion")}
-                  variant={"outlined"}
-                  labelId={"CoreInstall-Forge-SelectBase"}
-                  color={"primary"}
-                  onChange={(e) => {
-                    const s = String(e.target.value).split(ALICORN_SEPARATOR);
-                    if (s.length >= 2) {
-                      const c = String(s.shift());
-                      const i = String(s.shift());
-                      setBaseMojangVersionForge(i);
-                      setForgeContainer(c);
-                    }
-                  }}
-                  value={
-                    selectedForgeContainer && baseMojangVersionForge
-                      ? selectedForgeContainer +
-                        ALICORN_SEPARATOR +
-                        baseMojangVersionForge
-                      : ""
-                  }
-                >
-                  {patchableCores.map((r) => {
-                    return (
-                      <MenuItem
-                        key={r.container + "/" + r.id}
-                        value={r.container + ALICORN_SEPARATOR + r.id}
-                      >
-                        {`${r.container}/${r.id}`}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-              <br />
-              <Button
-                size={"large"}
-                className={classes.btn}
-                variant={"contained"}
-                color={"primary"}
-                disabled={
-                  isNull(selectedForgeContainer) || isNull(detectedForgeVersion)
-                }
-                onClick={async () => {
-                  clearDoing();
-                  setChangePageWarn(true);
-                  const mcv = baseMojangVersionForge;
-                  const fgv = detectedForgeVersion;
-                  setOperating(true);
-                  setFailed(false);
-                  const ct = getContainer(selectedForgeContainer);
-                  setProgressMsg(
-                    tr(
-                      "InstallCore.Progress.Fetching",
-                      `Loader=Forge`,
-                      `MCV=${mcv}`
-                    )
-                  );
-                  const stat = await getForgeInstaller(ct, mcv, fgv);
-                  if (!stat) {
-                    if (mounted.current) {
-                      setOperating(false);
-                      setChangePageWarn(false);
-                      setFailed(true);
-                      setFailedMsg(
-                        tr(
-                          "InstallCore.Progress.FailedToDownload",
-                          `Loader=Forge`
-                        )
-                      );
-                    }
-                    return;
-                  }
-                  setProgressMsg(tr("InstallCore.Progress.ExecutingForge"));
-                  const istat = await performForgeInstall(
-                    await getJavaRunnable(getDefaultJavaHome()),
-                    generateForgeInstallerName(mcv, fgv),
-                    ct
-                  );
-                  await removeForgeInstaller(ct, mcv, fgv);
-                  if (!istat) {
-                    if (mounted.current) {
-                      setOperating(false);
-                      setChangePageWarn(false);
-                      setFailed(true);
-                      setFailedMsg(tr("InstallCore.Progress.CouldNotExecute"));
-                    }
-                    return;
-                  } else {
-                    if (mounted.current) {
-                      setOperating(false);
-                      setChangePageWarn(false);
-                      setFailed(false);
-                      submitSucc(tr("InstallCore.Success"));
-                    }
-                  }
-                }}
-              >
-                {tr("InstallCore.Start")}
-              </Button>
-            </FormControl>
-          </TabPanel>
           {/* Fabric */}
-          <TabPanel value={tabValue} index={2}>
+          <TabPanel value={tabValue} index={1}>
             <FormControl fullWidth>
               <Typography className={classes.instr}>
                 {tr("InstallCore.InstallFabricInstr")}
@@ -707,7 +548,7 @@ export function InstallCore(): JSX.Element {
             </FormControl>
           </TabPanel>
           {/* Iris */}
-          <TabPanel value={tabValue} index={3}>
+          <TabPanel value={tabValue} index={2}>
             <FormControl fullWidth>
               <Typography className={classes.instr}>
                 {tr("InstallCore.InstallIrisInstr")}

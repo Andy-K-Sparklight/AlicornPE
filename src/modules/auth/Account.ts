@@ -1,3 +1,4 @@
+import { netPost } from "../../impl/ClicornAPI";
 import { uniqueHash } from "../commons/BasicHash";
 import { isNull, safeGet } from "../commons/Null";
 import { getUniqueID32 } from "../security/Encrypt";
@@ -46,21 +47,20 @@ export async function refreshToken(
   selectedProfile?: RemoteUserProfile
 ): Promise<AuthenticateDataCallback> {
   try {
-    const res = await fetch(trimURL(authServer) + "/refresh", {
-      headers: {
+    const res = await netPost(
+      trimURL(authServer) + "/refresh",
+      JSON.stringify({
         "Content-Type": "application/json",
-      },
-      method: "POST",
-      cache: "no-cache",
-      body: JSON.stringify({
+      }),
+      JSON.stringify({
         accessToken: acToken,
       }),
-      credentials: "include",
-    });
-    if (!res.ok) {
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
       throw "Failed to auth! Code: " + res.status;
     }
-    const rtt = await res.json();
+    const rtt = JSON.parse(res.body.toString());
     const tk = String(safeGet(rtt, ["accessToken"], acToken));
     const sp = safeGet(rtt, ["selectedProfile"]);
     const all = safeGet(rtt, ["availableProfiles"]);
@@ -91,14 +91,12 @@ export async function authenticate(
 ): Promise<AuthenticateDataCallback> {
   try {
     const tURL = trimURL(authServer) + "/authenticate";
-    const ress = await fetch(tURL, {
-      credentials: "include",
-      method: "POST",
-      headers: {
+    const ress = await netPost(
+      tURL,
+      JSON.stringify({
         "Content-Type": "application/json",
-      },
-      cache: "no-cache",
-      body: JSON.stringify({
+      }),
+      JSON.stringify({
         username: accountName,
         password: password,
         clientToken: getUniqueID32(),
@@ -107,11 +105,12 @@ export async function authenticate(
           version: 1,
         },
       }),
-    });
-    if (!ress.ok) {
+      0
+    );
+    if (ress.status < 200 || ress.status >= 300) {
       throw "Failed to auth! Code: " + ress.status;
     }
-    const res = await ress.json();
+    const res = JSON.parse(ress.body.toString());
     const accessToken = String(safeGet(res, ["accessToken"], "") || "");
     if (accessToken === "undefined" || accessToken.length === 0) {
       return { success: false, accessToken: "", availableProfiles: [] };
@@ -160,18 +159,17 @@ export async function validateToken(
   authServer: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(trimURL(authServer) + "/validate", {
-      headers: {
+    const res = await netPost(
+      trimURL(authServer) + "/validate",
+      JSON.stringify({
         "Content-Type": "application/json",
-      },
-      method: "POST",
-      cache: "no-cache",
-      credentials: "include",
-      body: JSON.stringify({
+      }),
+      JSON.stringify({
         accessToken: acToken,
       }),
-    });
-    if (!res.ok) {
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
       throw "Failed to auth! Code: " + res.status;
     }
     return true;

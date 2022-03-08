@@ -1,84 +1,47 @@
-# Alicorn Launcher
+# Alicorn Pocket Edition
 
-[中文 README](./README_ZH.md)
+携带版迷你 Alicorn。
 
-A third party Minecraft launcher, with high performance and freedom.
+## 为什么我们又需要一个新的启动器？
 
-![.](https://img.shields.io/badge/Alicorn-is%20cute!-df307f)
-![.](https://github.com/Andy-K-Sparklight/Alicorn/actions/workflows/codeql-analysis.yml/badge.svg)
-![.](https://github.com/Andy-K-Sparklight/Alicorn/actions/workflows/node.js.yml/badge.svg)
-![.](https://deepscan.io/api/teams/16407/projects/19670/branches/514338/badge/grade.svg)
-![.](https://img.shields.io/github/repo-size/Andy-K-Sparklight/Alicorn)
-![.](https://img.shields.io/github/license/Andy-K-Sparklight/Alicorn)
+Alicorn JE运行得很漂亮，但是她太大了。通常而言，人们喜欢一个可随身携带的小型启动器，并且只是想玩一玩 Vanilla 服务器，而不需要如此多的其它功能。为此，我们设计了 Alicorn PE。
 
-## Why Yet Another Launcher?
+## 构建
 
-It's simple: I've been using different launchers and none of them can meet my requirements.
+Alicorn PE 比 Alicorn JE 的构建要求更高：
 
-And that's why we develop Alicorn.
+- 构建 Alicorn PE 可以使用任意机器，但是 Alicorn PE 使用 Clicorn 作为底层支持，它的编译只能在一台 GNU/Linux 机器上完成。
 
-## Why Electron?
+- Node.js，没有明确版本要求，但越新越好
 
-Still simple: I fancy it!
+- 较快的网络连接
 
-Some other reasons include awesomely spectacular speed, etc.
+- Git
 
-There's no need to consider size. After all, nothing is bigger than your OS ;)
+- Zip
 
-## Principles
+Alicorn JE 不官方支持 macOS，因此 Alicorn PE 也不支持。
 
-0. Free as in freedom.
+Alicorn PE 总是和 Clicorn 一起构建，因此，请在继续之前，阅读 [Clicorn](https://github.com/Andy-K-Sparklight/Clicorn.git) 中的相关内容。
 
-1. Code quality and bug fixes.
+### 构建 Alicorn PE
 
-2. Even weight on functionalities and performance.
+1. 克隆本仓库和 [Clicorn](https://github.com/Andy-K-Sparklight/Clicorn.git)：
+   
+   ```shell
+   git clone https://github.com/Andy-K-Sparklight/AlicornPE.git
+   git clone https://github.com/Andy-K-Sparklight/Clicorn.git
+   ```
 
-3. Windows last.
-
-4. Bash first.
-
-5. Size is not that important, but sometimes is important.
-
-6. Throw away those stereotypes, the runnable is the best.
-
-7. Embrace UTF-8.
-
-8. Line Feed only.
-
-9. Try to make Alicorn looks the same in different platforms, but not definitely.
-
-10. No SaaS.
-
-## Build
-
-#### Build Executable
-
-To build Alicorn, you'll need:
-
-- [Node.js](https://nodejs.org)
-
-- [Git](https://git-scm.com)
-
-- Clone the repository:
-
-  ```shell
-  git clone https://github.com/Andy-K-Sparklight/Alicorn.git --depth=1
-  ```
-
-- Install dependencies:
-
-  ```shell
-  yarn
-  ```
-
-- Run build:
-
-  ```shell
-  yarn make
-  ```
-
-  This will generate binaries and put them under `out`, including Windows x64, Windows ia32, GNU/Linux x64, GNU/Linux arm64 ~~and macOS x64~~. This will also generate corresponding archives.
-
-  _The support for macOS has ended and no more platform dependent code will be commited. The modules present are still kept, but might not run correctly._
-
-  You also need `wine` to complete the cross build progress on platforms other than Windows. Follow the instructions given by `electron-packager`.
+2. 安装依赖和构建：
+   
+   ```shell
+   cd AlicornPE
+   yarn
+   yarn release
+   yarn pack
+   mv out/pack.zip ../Clicorn/
+   cd ..
+   ```
+   
+   这会生成最终编译所需要的文件。

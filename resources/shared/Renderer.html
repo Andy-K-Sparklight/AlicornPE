@@ -8,9 +8,7 @@
       content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <link rel="preload" as="script" href="./Renderer.js" />
-    <link rel="preload" as="font" href="./SourceHanSansCN-Regular.otf" />
     <link rel="preload" as="font" href="./UbuntuMono-Latin.woff2" />
-    <link rel="preload" as="script" href="./SkinView3D.js" />
     <style>
       .window-drag,
       .window-drag > * {
@@ -22,7 +20,7 @@
       }
       @font-face {
         font-family: "Source Hans Sans";
-        src: url(SourceHanSansCN-Regular.otf);
+        src: url(https://cdn.jsdelivr.net/gh/Andy-K-Sparklight/Alicorn@main/resources/shared/SourceHanSansCN-Regular.otf);
       }
       @font-face {
         font-family: "Ubuntu Mono";
@@ -41,7 +39,7 @@
         background-color: #ffe0f0;
         white-space: pre-line;
         user-select: none;
-        -webkit-font-smoothing: antialiased;
+        -webkit-user-select: none;
       }
       body {
         height: 100%;
@@ -101,17 +99,6 @@
       style="font-family: 'Ubuntu Mono', 'Courier New', Courier, monospace"
     ></p>
     <script>
-      if (process.env.ALICORN_REACT_DEVTOOLS) {
-        let { ipcRenderer } = require("electron");
-        if (ipcRenderer.sendSync("askInject")) {
-          let dev = document.createElement("script");
-          dev.src = "http://localhost:8097";
-          document.head.appendChild(dev);
-          dev = null;
-        }
-      }
-    </script>
-    <script>
       window.logToScreen = (msg) => {
         let e = document.getElementById("preboot_log");
         if (e) {
@@ -129,6 +116,9 @@
       };
     </script>
     <script src="Renderer.js" async></script>
-    <script src="SkinView3D.js" defer></script>
+    <script
+      src="https://cdn.jsdelivr.net/gh/Andy-K-Sparklight/Alicorn@main/resources/shared/SkinView3D.js"
+      defer
+    ></script>
   </body>
 </html>

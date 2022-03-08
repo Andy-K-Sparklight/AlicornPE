@@ -120,26 +120,6 @@ export async function analyzeCrashReport(
   }
 }
 
-async function getOnlineCrashLoader(
-  url: string
-): Promise<CrashLoader | undefined> {
-  try {
-    const r = await (
-      await fetch(url, {
-        method: "GET",
-        credentials: "omit",
-      })
-    ).text();
-    const obj = eval(r);
-    if (obj) {
-      return obj as CrashLoader;
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 export type CrashReportMap = Map<
   number,
   { origin: string; report: CrashLoaderReport[] }

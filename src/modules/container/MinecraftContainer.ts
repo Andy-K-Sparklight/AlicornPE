@@ -1,4 +1,4 @@
-import path from "path";
+import { pathBasename, pathDirname, pathJoin } from "../../impl/Path";
 import { getNativeArtifact, JAR_SUFFIX } from "../launch/NativesLint";
 import { LibraryMeta } from "../profile/Meta";
 
@@ -17,50 +17,50 @@ export class MinecraftContainer {
   private readonly dynamicModsRoot;
 
   getModJar(modJar: string): string {
-    return path.resolve(this.getModsRoot(), modJar);
+    return pathJoin(this.getModsRoot(), modJar);
   }
 
   getVersionBase(): string {
-    return path.resolve(this.versionsBase);
+    return pathJoin(this.versionsBase);
   }
 
   getAssetsRootLegacy(): string {
-    return path.resolve(this.assetsRoot, "legacy");
+    return pathJoin(this.assetsRoot, "legacy");
   }
   getPff2LockFile(): string {
-    return path.resolve(this.rootDir, "pff2.lock");
+    return pathJoin(this.rootDir, "pff2.lock");
   }
   getTempFileStorePath(relativePath: string): string {
-    return path.resolve(this.tempFileRoot, relativePath);
+    return pathJoin(this.tempFileRoot, relativePath);
   }
 
   getNativeLibraryExtractedRoot(library: LibraryMeta): string {
     const nativeLibraryPath = getNativeArtifact(library).path;
-    return path.resolve(
+    return pathJoin(
       this.getLibraryPath(
-        path.join(
-          path.dirname(nativeLibraryPath),
-          path.basename(nativeLibraryPath, JAR_SUFFIX)
+        pathJoin(
+          pathDirname(nativeLibraryPath),
+          pathBasename(nativeLibraryPath, JAR_SUFFIX)
         )
       )
     );
   }
 
   getLog4j2FilePath(xmlName: string): string {
-    return path.resolve(this.log4j2Root, xmlName);
+    return pathJoin(this.log4j2Root, xmlName);
   }
 
   getAssetsIndexPath(index: string): string {
-    return path.resolve(this.assetsRoot, "indexes", index + ".json");
+    return pathJoin(this.assetsRoot, "indexes", index + ".json");
   }
 
   getAssetPathLegacy(name: string): string {
-    return path.resolve(this.assetsRoot, "legacy", name);
+    return pathJoin(this.assetsRoot, "legacy", name);
   }
 
   getAssetPath(hash: string): string {
     const header = hash.slice(0, 2);
-    return path.resolve(this.assetsRoot, "objects", header, hash);
+    return pathJoin(this.assetsRoot, "objects", header, hash);
   }
 
   getSavesRoot(): string {
@@ -84,15 +84,15 @@ export class MinecraftContainer {
   }
 
   getVersionRoot(id: string): string {
-    return path.resolve(this.versionsBase, id);
+    return pathJoin(this.versionsBase, id);
   }
 
   getProfilePath(id: string): string {
-    return path.resolve(this.getVersionRoot(id), id + ".json");
+    return pathJoin(this.getVersionRoot(id), id + ".json");
   }
 
   getLibraryPath(libPath: string): string {
-    return path.resolve(this.librariesBase, libPath);
+    return pathJoin(this.librariesBase, libPath);
   }
 
   getLibrariesRoot(): string {
@@ -100,7 +100,7 @@ export class MinecraftContainer {
   }
 
   resolvePath(relativePath?: string): string {
-    return path.resolve(this.rootDir, relativePath || "");
+    return pathJoin(this.rootDir, relativePath || "");
   }
 
   getDynamicModsRoot(): string {
@@ -108,7 +108,7 @@ export class MinecraftContainer {
   }
 
   getDynamicModJar(modJar: string): string {
-    return path.resolve(this.getDynamicModsRoot(), modJar);
+    return pathJoin(this.getDynamicModsRoot(), modJar);
   }
 
   constructor(rootDir: string, id: string) {

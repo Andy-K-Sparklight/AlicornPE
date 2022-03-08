@@ -2,9 +2,6 @@ import {
   AccountCircle,
   AllInbox,
   ArrowBack,
-  Code,
-  DisplaySettings,
-  Dns,
   FlightTakeoff,
   GetApp,
   Handyman,
@@ -13,10 +10,7 @@ import {
   Info,
   ManageAccounts,
   Menu,
-  Mic,
   PowerSettingsNew,
-  Psychology,
-  Refresh,
   Settings,
   ShowChart,
   ViewModule,
@@ -25,14 +19,8 @@ import {
   Alert,
   AppBar,
   Box,
-  Button,
   Chip,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Drawer,
   Fab,
   IconButton,
@@ -41,15 +29,11 @@ import {
   ListItemIcon,
   ListItemText,
   Snackbar,
-  TextField,
-  ThemeProvider,
   Toolbar,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { ipcRenderer } from "electron";
-import hotkeys from "hotkeys-js";
 import React, { useEffect, useRef, useState } from "react";
 import { Route } from "react-router-dom";
 import { expose } from "../modules/boticorn/FTable";
@@ -61,14 +45,9 @@ import {
 } from "../modules/config/ConfigSupport";
 import { saveGDT } from "../modules/container/ContainerUtil";
 import { saveVF } from "../modules/container/ValidateRecord";
-import { handleDnD } from "../modules/dnd/DnDCenter";
 import { saveJDT } from "../modules/java/JavaInfo";
-import { sendEcho } from "../modules/selfupdate/Echo";
-import { waitUpdateFinished } from "../modules/selfupdate/Updator";
-import { saveServers } from "../modules/server/ServerFiles";
 import { ContainerManager } from "./ContainerManager";
 import { CrashReportDisplay } from "./CrashReportDisplay";
-import { DMCenter } from "./DMCenter";
 import { waitInstDone } from "./FirstRunSetup";
 import {
   canGoBack,
@@ -82,27 +61,14 @@ import { InstallCore } from "./InstallCore";
 import { Instruction, isInstBusy, startInst } from "./Instruction";
 import { JavaSelector } from "./JavaSelector";
 import { LaunchPad } from "./LaunchPad";
-import { Boticorn } from "./linkage/Boticorn";
-import { CadanceControlPanel, terminateCadanceProc } from "./linkage/Cadance";
 import { YNDialog2 } from "./OperatingHint";
 import { OptionsPage } from "./Options";
 import { PffFront } from "./PffFront";
 import { ReadyToLaunch } from "./ReadyToLaunch";
-import {
-  ALICORN_DEFAULT_THEME_DARK,
-  ALICORN_DEFAULT_THEME_LIGHT,
-  isBgDark,
-} from "./Renderer";
-import { ServerList } from "./ServerList";
 import { saveStatistics, Statistics } from "./Statistics";
 import { AlicornTheme } from "./Stylex";
 import { TheEndingOfTheEnd } from "./TheEndingOfTheEnd";
-import { TipsOfToday } from "./TipsOfToday";
 import { tr } from "./Translator";
-import { BuildUp } from "./utilities/BuildUp";
-import { CarouselBoutique } from "./utilities/CarouselBoutique";
-import { CutieConnet } from "./utilities/CutieConnect";
-import { NetCheck } from "./utilities/NetCheck";
 import { PffVisual } from "./utilities/PffVisual";
 import { UtilitiesIndex } from "./utilities/UtilitiesIndex";
 import { VersionView } from "./VersionView";
@@ -233,11 +199,6 @@ export function App(): JSX.Element {
     };
   }, []);
   useEffect(() => {
-    ipcRenderer.once("YouAreGoingToBeKilled", () => {
-      void exitApp();
-    });
-  }, []);
-  useEffect(() => {
     const id = setInterval(async () => {
       await intervalSaveData();
     }, 300000);
@@ -301,7 +262,6 @@ export function App(): JSX.Element {
           );
           return;
         }
-        void handleDnD(e);
       }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -324,19 +284,7 @@ export function App(): JSX.Element {
             <Menu />
           </IconButton>
           <Box className={classes.title}>
-            <Typography
-              variant={"h6"}
-              className={
-                getString("frame.drag-impl") === "Webkit" ? " window-drag" : ""
-              }
-              onMouseDown={
-                getString("frame.drag-impl") === "Delta"
-                  ? onMouseDown
-                  : undefined
-              }
-            >
-              {tr(page)}
-            </Typography>
+            <Typography variant={"h6"}>{tr(page)}</Typography>
           </Box>
           <Box
             style={
@@ -361,57 +309,6 @@ export function App(): JSX.Element {
                   }}
                 >
                   <ArrowBack />
-                </IconButton>
-              </Tooltip>
-            ) : (
-              ""
-            )}
-            {getBoolean("dev") ? (
-              <Tooltip
-                title={
-                  <Typography className={"smtxt"}>
-                    {tr("MainMenu.Reload")}
-                  </Typography>
-                }
-              >
-                <IconButton
-                  color={"inherit"}
-                  className={classes.floatButton}
-                  onClick={() => {
-                    remoteHideWindow();
-                    terminateCadanceProc();
-                    waitUpdateFinished(() => {
-                      intervalSaveData()
-                        .then(() => {
-                          ipcRenderer.send("readyToClose");
-                          ipcRenderer.send("reload");
-                        })
-                        .catch(() => {});
-                    });
-                  }}
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            ) : (
-              ""
-            )}
-            {getBoolean("dev") ? (
-              <Tooltip
-                title={
-                  <Typography className={"smtxt"}>
-                    {tr("MainMenu.OpenDevToolsFormal")}
-                  </Typography>
-                }
-              >
-                <IconButton
-                  color={"inherit"}
-                  className={classes.floatButton}
-                  onClick={() => {
-                    remoteOpenDevTools();
-                  }}
-                >
-                  <Code />
                 </IconButton>
               </Tooltip>
             ) : (
@@ -548,11 +445,8 @@ export function App(): JSX.Element {
             path={"/AccountManager/:adding?/:server?"}
             component={YggdrasilAccountManager}
           />
-          <Route path={"/Cadance"} component={CadanceControlPanel} />
-          <Route path={"/Boticorn"} component={Boticorn} />
           <Route path={"/JavaSelector"} component={JavaSelector} />
           <Route path={"/Options"} component={OptionsPage} />
-          <Route path={"/DMCenter"} component={DMCenter} />
           <Route path={"/CrashReportDisplay"} component={CrashReportDisplay} />
           <Route
             path={
@@ -561,16 +455,8 @@ export function App(): JSX.Element {
             component={PffFront}
           />
           <Route path={"/Welcome"} component={Welcome} />
-          <Route path={"/ServerList"} component={ServerList} />
           <Route path={"/UtilitiesIndex"} component={UtilitiesIndex} />
-          <Route path={"/Utilities/NetCheck"} component={NetCheck} />
-          <Route path={"/Utilities/CutieConnect"} component={CutieConnet} />
-          <Route path={"/Utilities/BuildUp"} component={BuildUp} />
           <Route path={"/Utilities/PffVisual"} component={PffVisual} />
-          <Route
-            path={"/Utilities/CarouselBoutique"}
-            component={CarouselBoutique}
-          />
           <Route path={"/Statistics"} component={Statistics} />
           <Route path={"/TheEndingOfTheEnd"} component={TheEndingOfTheEnd} />
         </Container>
@@ -596,13 +482,6 @@ export function App(): JSX.Element {
         yes={tr("System.JumpPageWarn.Yes")}
         no={tr("System.JumpPageWarn.No")}
       />
-      <TipsOfToday
-        onClose={() => {
-          setOpenTips(false);
-        }}
-        open={openTips}
-      />
-      <Echo />
       <Snackbar
         open={openNotice}
         sx={{
@@ -678,12 +557,8 @@ export function App(): JSX.Element {
   );
 }
 
-async function exitApp(): Promise<void> {
-  remoteHideWindow();
-  await ipcRenderer.invoke("markLoginItem", getBoolean("auto-launch"));
-  waitUpdateFinished(() => {
-    remoteCloseWindow();
-  });
+function exitApp(): void {
+  remoteCloseWindow();
 }
 
 const PAGES_ICONS_MAP: Record<string, JSX.Element> = {
@@ -693,18 +568,14 @@ const PAGES_ICONS_MAP: Record<string, JSX.Element> = {
   ContainerManager: <AllInbox />,
   JavaSelector: <ViewModule />,
   AccountManager: <AccountCircle />,
-  Cadance: <Mic />,
-  Boticorn: <Psychology />,
   UtilitiesIndex: <Handyman />,
   Statistics: <ShowChart />,
   Options: <Settings />,
-  DMCenter: <DisplaySettings />,
-  ServerList: <Dns />,
   Version: <Info />,
   TheEndingOfTheEnd: <ImportContacts />,
 };
 
-const BETAS = ["ServerList", "Boticorn", "Cadance", "DMCenter"];
+const BETAS: string[] = [];
 
 function PagesDrawer(props: {
   open: boolean;
@@ -742,68 +613,24 @@ function PagesDrawer(props: {
   );
 }
 
-export function remoteHideWindow(): void {
-  console.log("Preparing to exit!");
-  ipcRenderer.send("hideWindow");
-}
-
 function remoteCloseWindow(): void {
   console.log("Closing!");
-  terminateCadanceProc();
   intervalSaveData()
     .then(() => {
-      ipcRenderer.send("readyToClose");
-      ipcRenderer.send("closeWindow");
+      // @ts-ignore
+      window._closeWindow();
     })
-    .catch(() => {});
-}
-
-function remoteOpenDevTools(): void {
-  ipcRenderer.send("openDevTools");
-  console.log(
-    "%c" + tr("System.DevToolsWarn1"),
-    "font-size:3.5rem;color:royalblue;font-weight:900;"
-  );
-  console.log("%c" + tr("System.DevToolsWarn2"), "font-size:1rem;color:red;");
-  console.log("%c" + tr("System.DevToolsWarn3"), "font-size:2rem;color:red;");
+    .catch((e) => {
+      console.log(e);
+    });
 }
 
 export async function intervalSaveData(): Promise<void> {
-  console.log("Saving data...");
   await saveConfig();
   await saveGDT();
   await saveJDT();
   await saveVF();
-  await saveServers();
   saveStatistics();
-  console.log("All chunks are saved.");
-}
-
-let animationId: number | null = null;
-let mouseX: number | null = null;
-let mouseY: number | null = null;
-
-function onMouseDown(e: React.MouseEvent) {
-  if (e.button === 0) {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    document.addEventListener("mouseup", onMouseUp);
-    requestAnimationFrame(moveWindow);
-  }
-}
-
-function onMouseUp(e: MouseEvent) {
-  if (e.button === 0) {
-    document.removeEventListener("mouseup", onMouseUp);
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-    }
-  }
-}
-
-function moveWindow() {
-  ipcRenderer.send("windowMoving", { mouseX, mouseY });
-  animationId = requestAnimationFrame(moveWindow);
 }
 
 function BetaTag(): JSX.Element {
@@ -817,62 +644,5 @@ function BetaTag(): JSX.Element {
         variant={"outlined"}
       />
     </>
-  );
-}
-
-function Echo(): JSX.Element {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  useEffect(() => {
-    if (getBoolean("features.echo")) {
-      hotkeys("t", () => {
-        if (!open) {
-          setOpen(true);
-        }
-      });
-    }
-    return () => {
-      hotkeys.unbind("t");
-    };
-  }, []);
-
-  return (
-    <ThemeProvider
-      theme={
-        isBgDark() ? ALICORN_DEFAULT_THEME_DARK : ALICORN_DEFAULT_THEME_LIGHT
-      }
-    >
-      <Dialog
-        open={open}
-        onClose={() => {
-          setOpen(false);
-        }}
-      >
-        <DialogContent>
-          <DialogTitle>{tr("Echo.Title")}</DialogTitle>
-          <DialogContentText>{tr("Echo.Hint")}</DialogContentText>
-          <TextField
-            value={input}
-            fullWidth
-            placeholder={tr("Echo.PlaceHolder")}
-            onChange={(e) => {
-              setInput(e.target.value);
-            }}
-          />
-          <DialogActions>
-            <Button
-              disabled={input.trim().length <= 0}
-              onClick={() => {
-                setOpen(false);
-                setInput("");
-                sendEcho(input);
-              }}
-            >
-              {tr("Echo.Send")}
-            </Button>
-          </DialogActions>
-        </DialogContent>
-      </Dialog>
-    </ThemeProvider>
   );
 }

@@ -1,16 +1,10 @@
-import { ChildProcess, exec, spawn } from "child_process";
-import EventEmitter from "events";
-import os from "os";
+import { spawnProc } from "../../impl/ClicornAPI";
+import { EventEmitter } from "../../impl/EventEmitter";
 import { PROCESS_END_GATE, PROCESS_LOG_GATE } from "../commons/Constants";
 import { MinecraftContainer } from "../container/MinecraftContainer";
-import { restoreMods } from "../modx/ModDynLoad";
 
-const POOL = new Map<string, RunningMinecraft>();
-const REV_POOL = new Map<RunningMinecraft, string>();
-
-export function getRunningInstanceCount(): number {
-  return POOL.size;
-}
+const POOL = new Map<number, RunningMinecraft>();
+const REV_POOL = new Map<RunningMinecraft, number>();
 
 class RunningMinecraft {
   readonly args: string[];
@@ -20,8 +14,9 @@ class RunningMinecraft {
   status: RunningStatus = RunningStatus.STARTING;
   emitter: EventEmitter | null = null;
   exitCode = "";
-  private process: ChildProcess | null = null;
-  // logs: Pair<string[], string[]> = new Pair<string[], string[]>([], []);
+  private process = -1;
+  onMessage: (e: Event) => unknown = () => {};
+  onExit: (e: Event) => unknown = () => {};
 
   constructor(
     args: string[],
@@ -36,63 +31,40 @@ class RunningMinecraft {
     this.emitter = emitter;
     this.isolateRoot = isolateRoot;
   }
-  run(): string {
+  async run(): Promise<number> {
     try {
-      this.process = spawn(this.executable, this.args, {
-        cwd: this.isolateRoot || this.container.rootDir,
-        detached: true, // Won't close after launcher closed
-      });
+      this.process = await spawnProc(
+        `"${this.executable}" ${escapeArgs(this.args).join(" ")}`
+      );
     } catch (e) {
       console.log(e);
+      return -1;
     }
-    this.process?.on("exit", (code, signal) => {
-      this.status = RunningStatus.STOPPING;
-      if (code === undefined || code === null) {
-        this.exitCode = String(signal);
-      }
-      this.exitCode = String(code);
-      this.emitter?.emit(PROCESS_END_GATE, this.exitCode);
-      const id = REV_POOL.get(this);
-      if (id !== undefined) {
-        POOL.delete(id);
-      }
-      REV_POOL.delete(this);
-    });
+    this.onMessage = (e: Event) => {
+      const l = Buffer.from((e as CustomEvent).detail, "base64").toString();
+      this.emitter?.emit(PROCESS_LOG_GATE, l, false);
+    };
+    this.onExit = (e: Event) => {
+      this.emitter?.emit(PROCESS_END_GATE, (e as CustomEvent).detail);
+      window.removeEventListener(`ProcOutput-${this.process}`, this.onMessage);
+      window.removeEventListener(`ProcExit-${this.process}`, this.onExit);
+    };
+    window.addEventListener(`ProcOutput-${this.process}`, this.onMessage);
+    window.addEventListener(`ProcExit-${this.process}`, this.onExit);
 
-    this.process?.stdout?.on("data", (d) => {
-      const strD = d.toString();
-      // this.logs.getFirstValue().push(strD);
-      this.emitter?.emit(PROCESS_LOG_GATE, strD, false);
-    });
-    this.process?.stderr?.on("data", (d) => {
-      const strD = d.toString();
-      // this.logs.getSecondValue().push(strD);
-      this.emitter?.emit(PROCESS_LOG_GATE, strD, true);
-    });
-    const id = (
-      this.process?.pid || Math.floor(Math.random() * 10000)
-    ).toString();
+    const id = this.process;
     POOL.set(id, this);
     REV_POOL.set(this, id);
     this.status = RunningStatus.RUNNING;
     return id;
   }
 
-  kill(): void {
-    this.status = RunningStatus.STOPPING;
-    const pid = this.process?.pid;
-    if (pid) {
-      if (os.platform() === "win32") {
-        exec(`taskkill /pid ${pid} /t /f`);
-      } else {
-        exec("kill -KILL " + pid);
-      }
-    }
+  async kill(): Promise<void> {
+    // Nothing will actually happen
   }
 
-  disconnect(): void {
-    this.status = RunningStatus.UNKNOWN;
-    this.process?.disconnect();
+  async disconnect(): Promise<void> {
+    await this.kill(); // Alias
   }
 
   onEnd(fn: (exitCode: string) => unknown): void {
@@ -125,7 +97,7 @@ export function runMinecraft(
   container: MinecraftContainer,
   isolateRoot: string,
   emitter?: EventEmitter
-): string {
+): Promise<number> {
   const runningArtifact = new RunningMinecraft(
     args,
     javaExecutable,
@@ -133,12 +105,16 @@ export function runMinecraft(
     isolateRoot,
     emitter
   );
-  runningArtifact.onEnd(() => {
-    void restoreMods(container);
-  });
   return runningArtifact.run();
 }
 
-export function stopMinecraft(runID: string): void {
-  POOL.get(runID)?.kill();
+export function escapeArgs(a: string[]): string[] {
+  const o: string[] = [];
+  for (let x of a) {
+    if (x.includes(" ")) {
+      x = `"${x.replaceAll('"', '\\"')}"`;
+    }
+    o.push(x);
+  }
+  return o;
 }

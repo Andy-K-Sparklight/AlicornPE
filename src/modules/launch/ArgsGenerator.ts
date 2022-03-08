@@ -1,9 +1,8 @@
-import os from "os";
-import path from "path";
+import { getFreeMemory, getTotalMemory } from "../../impl/ClicornAPI";
+import { pathDelimiter, pathJoin } from "../../impl/Path";
 import {
   ALICORN_SEPARATOR,
   ALICORN_VERSION_TYPE,
-  FILE_SEPARATOR,
   LAUNCHER_NAME,
   LAUNCHER_VERSION,
   MOJANG_USER_TYPE,
@@ -79,7 +78,7 @@ export function generateVMArgs(
   }
   // Specialize for 'client.jar'
   usingLibs.push(
-    path.join(container.getVersionRoot(profile.id), profile.id + JAR_SUFFIX) // Always navigate to the same
+    pathJoin(container.getVersionRoot(profile.id), profile.id + JAR_SUFFIX) // Always navigate to the same
   );
   /*
   if (!isNull(profile.clientArtifacts)) {
@@ -90,15 +89,15 @@ export function generateVMArgs(
     );
   }*/
   // All natives directories put together
-  vMap.set("natives_directory", nativesLibs.join(FILE_SEPARATOR));
+  vMap.set("natives_directory", nativesLibs.join(pathDelimiter()));
   // 1.17
   vMap.set("library_directory", container.getLibrariesRoot());
   // Attention! Use base version!
   // BAD FORGE CAUSED ALL THIS - I WASTED 2 HOURS WHICH COULD HAVE BE SPENT WITH MY PONY FRIENDS
   vMap.set("version_name", profile.id); // This SHOULD WORK NOW ??????? Ye servey dog!
-  vMap.set("classpath_separator", FILE_SEPARATOR);
+  vMap.set("classpath_separator", pathDelimiter());
   // All class paths put together
-  vMap.set("classpath", usingLibs.join(FILE_SEPARATOR));
+  vMap.set("classpath", usingLibs.join(pathDelimiter()));
   // Log4j argument
   vMap.set("path", container.getLog4j2FilePath(profile.logFile.path));
 
@@ -176,18 +175,6 @@ export function applyAJ(
   );
 }
 
-// Nide8
-// NEVER EVER APPLY THIS TOGETHER WITH AUTHLIB INJECTOR!!
-export function applyND(ndPath: string, serverId: string): string[] {
-  const tPath = ndPath.trim();
-  const sid = serverId.trim();
-  if (isNull(tPath) || isNull(sid)) {
-    return [];
-  }
-  // Nide8 has not prefetch, that's good!
-  return [`-javaagent:${tPath}=${sid}`, "-Dnide8auth.client=true"];
-}
-
 export function applyMemory(max: number): string[] {
   if (max > 0) {
     const min = Math.floor(max * 0.7);
@@ -207,9 +194,9 @@ export function applyScheme(
   return RAM_SCHEME[scheme2];
 }
 
-export function autoMemory(): number {
-  const totalMem = Math.floor(os.totalmem() / 1048576);
-  const freeMem = Math.floor(os.freemem() / 1048576);
+export async function autoMemory(): Promise<number> {
+  const totalMem = Math.floor((await getTotalMemory()) / 1048576);
+  const freeMem = Math.floor((await getFreeMemory()) / 1048576);
   // Free > 70%, Max = 90% of free
   // Free > 50%, Max = 85% of free
   // Free > 30%, Use = 75% of free

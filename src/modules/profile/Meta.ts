@@ -1,4 +1,4 @@
-import os from "os";
+import { getOsType } from "../../impl/ClicornAPI";
 import { isNull, safeGet } from "../commons/Null";
 
 export class OptionalArgument {
@@ -259,11 +259,18 @@ class Rule {
         return false;
       }
     }
+
+    /*
+    PE only supports x64.
+
     if (this.requireOSArch !== "") {
       if (os.arch() !== this.requireOSArch) {
         return false;
       }
-    }
+    }*/
+    /*
+    Won't do this for Windows 10 
+
     if (this.requireOSVersion !== "") {
       try {
         const versionRegex = new RegExp(this.requireOSVersion);
@@ -274,12 +281,13 @@ class Rule {
         return false;
       }
     }
+    */
     return true;
   }
 }
 
 export function getCurrentOSNameAsMojang(): string {
-  const currentOSName = os.platform();
+  const currentOSName = getOsType();
   switch (currentOSName) {
     case "win32":
       return "windows";

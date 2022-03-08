@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { getBoolean } from "../modules/config/ConfigSupport";
 import { getContainer } from "../modules/container/ContainerUtil";
 import { loadProfile } from "../modules/profile/ProfileLoader";
-import { getEchos } from "../modules/selfupdate/Echo";
 import { jumpTo, triggerSetPage } from "./GoTo";
 import { ShiftEle } from "./Instruction";
 import { LAST_SUCCESSFUL_GAME_KEY } from "./ReadyToLaunch";
@@ -20,20 +19,6 @@ export function Welcome(): JSX.Element {
   useEffect(() => {
     const i = setInterval(() => {
       setRefresh(!refreshBit);
-      if (getBoolean("features.echo")) {
-        const echos = getEchos();
-        if (Math.random() > 0.6) {
-          if (echos.length > 0) {
-            setTip(
-              tr(
-                "Echo.Format",
-                `Text=${echos[Math.floor(Math.random() * echos.length)]}`
-              )
-            );
-            return;
-          }
-        }
-      }
       setTip(null);
     }, 5000);
     return () => {

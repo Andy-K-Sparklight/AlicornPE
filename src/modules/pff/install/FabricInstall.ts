@@ -1,17 +1,24 @@
-import childProcess from "child_process";
-import fs from "fs-extra";
+import {
+  closeFile,
+  ensureDir,
+  isFileExist,
+  openFile,
+  readFile,
+  spawnProc,
+  writeFile,
+} from "../../../impl/ClicornAPI";
+import { waitProcessEnd } from "../../../impl/Process";
 import { basicHash } from "../../commons/BasicHash";
 import { MinecraftContainer } from "../../container/MinecraftContainer";
-import { addDoing } from "../../download/DownloadWrapper";
 import { xgot } from "../../download/GotWrapper";
 import { ensureLibraries } from "../../launch/Ensurance";
+import { escapeArgs } from "../../launch/MinecraftBootstrap";
 import { GameProfile } from "../../profile/GameProfile";
 import { convertLibsByName } from "../../profile/LibrariesConvert";
 import {
   FABRIC_VERSIONS_LOADER,
   generateFabricJarName,
 } from "../get/FabricGet";
-import { makeTempLP } from "./ForgeInstall";
 
 const JAR_ARG = "-jar";
 const PROFILE_JSON_SUFFIX = "/profile/json";
@@ -30,7 +37,7 @@ export async function performFabricInstall(
       // Fabric has less libraries, much faster than Forge!
       await ensureFabricLibrariesOL(mcv, fbv, container);
       await bootFabricInstaller(jExecutable, fbURL, fbv, mcv, container);
-      await fs.ensureDir(container.getModsRoot());
+      await ensureDir(container.getModsRoot());
     } catch (e) {
       console.log(e);
       failBit = false;
@@ -42,7 +49,7 @@ export async function performFabricInstall(
   }
 }
 
-function bootFabricInstaller(
+async function bootFabricInstaller(
   jExecutable: string,
   fbURL: string,
   fbv: string,
@@ -61,36 +68,16 @@ function bootFabricInstaller(
   const fbJar = container.getTempFileStorePath(
     generateFabricJarName(basicHash(fbURL).slice(0, 8))
   );
-  return new Promise<void>((resolve, reject) => {
-    try {
-      const prc = childProcess.spawn(
-        jExecutable,
-        [JAR_ARG, fbJar].concat(fArg),
-        {
-          cwd: container.resolvePath(),
-        }
-      );
-      prc.on("close", (code) => {
-        if (code === 0) {
-          resolve();
-        }
-        reject();
-      });
-      prc.on("error", () => {
-        prc.kill("SIGKILL");
-        reject();
-      });
-      prc.stdout?.on("data", (d) => {
-        addDoing(d.toString());
-      });
-      prc.stderr?.on("data", (d) => {
-        addDoing(d.toString());
-      });
-    } catch (e) {
-      console.log(e);
-      reject(e);
-    }
-  });
+
+  try {
+    const prc = await spawnProc(
+      `"${jExecutable}" ${escapeArgs([JAR_ARG, fbJar].concat(fArg)).join(" ")}`
+    );
+    await waitProcessEnd(prc);
+  } catch (e) {
+    console.log(e);
+    throw e;
+  }
 }
 
 async function ensureFabricLibrariesOL(
@@ -106,4 +93,28 @@ async function ensureFabricLibrariesOL(
   } catch {
     return;
   }
+}
+const LAUNCHER_PROFILES = "launcher_profiles.json";
+// Create an empty 'launcher_profile.json' for the silly installer
+async function makeTempLP(container: MinecraftContainer): Promise<void> {
+  try {
+    const originLP = container.resolvePath(LAUNCHER_PROFILES);
+    if (!(await isFileExist(originLP))) {
+      const fd = await openFile(originLP, "r");
+      await writeFile(fd, Buffer.from(JSON.stringify({ profiles: {} })));
+      await closeFile(fd);
+      return;
+    }
+    try {
+      const fd = await openFile(originLP, "r+");
+      const dt = await readFile(fd);
+      const f = JSON.parse(dt.toString());
+
+      if (typeof f.profiles !== "object") {
+        // Bad LP!
+        await writeFile(fd, Buffer.from(JSON.stringify({ profiles: {} })));
+      }
+      await closeFile(fd);
+    } catch {}
+  } catch {}
 }

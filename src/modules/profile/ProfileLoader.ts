@@ -1,6 +1,10 @@
-import fs from "fs-extra";
-import path from "path";
-import { isFileExist } from "../commons/FileUtil";
+import {
+  closeFile,
+  isFileExist,
+  openFile,
+  readFile,
+} from "../../impl/ClicornAPI";
+import { pathIsAbsolute, pathJoin } from "../../impl/Path";
 import { scanCoresIn } from "../container/ContainerScanner";
 import { MinecraftContainer } from "../container/MinecraftContainer";
 import { JAR_SUFFIX } from "../launch/NativesLint";
@@ -34,7 +38,9 @@ export function isStillNeeded(
             await scanCoresIn(container, false)
           ).map(async (c) => {
             const f = container.getProfilePath(c);
-            const j = await fs.readJSON(f);
+            const fd = await openFile(f, "r");
+            const j = JSON.parse((await readFile(fd)).toString());
+            await closeFile(fd);
             if (j.inheritsFrom === id) {
               throw "Found";
             }
@@ -55,7 +61,9 @@ export async function loadProfile(
 ): Promise<GameProfile> {
   let jsonObj;
   try {
-    jsonObj = await fs.readJSON(container.getProfilePath(id));
+    const fd = await openFile(container.getProfilePath(id), "r");
+    jsonObj = JSON.parse((await readFile(fd)).toString());
+    await closeFile(fd);
   } catch {
     throw "Profile not exist! Reading: " + id;
   }
@@ -93,8 +101,8 @@ function fixProfileClient<T extends GameProfile>(
   container: MinecraftContainer
 ): T {
   const c1 = profile.clientArtifact.clone();
-  if (!path.isAbsolute(c1.path)) {
-    c1.path = path.resolve(
+  if (!pathIsAbsolute(c1.path)) {
+    c1.path = pathJoin(
       container.getVersionRoot(profile.id),
       profile.id + JAR_SUFFIX
     );
@@ -110,8 +118,8 @@ export async function isProfileIsolated(
 ): Promise<boolean> {
   const root = container.getVersionRoot(id);
   return (
-    (await isFileExist(path.join(root, "saves"))) ||
-    (await isFileExist(path.join(root, "mods"))) ||
-    (await isFileExist(path.join(root, "logs")))
+    (await isFileExist(pathJoin(root, "saves"))) ||
+    (await isFileExist(pathJoin(root, "mods"))) ||
+    (await isFileExist(pathJoin(root, "logs")))
   );
 }

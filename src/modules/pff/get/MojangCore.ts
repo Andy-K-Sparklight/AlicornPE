@@ -1,4 +1,4 @@
-import path from "path";
+import { pathJoin } from "../../../impl/Path";
 import { MOJANG_VERSIONS_MANIFEST, ReleaseType } from "../../commons/Constants";
 import { safeGet } from "../../commons/Null";
 import { MinecraftContainer } from "../../container/MinecraftContainer";
@@ -71,7 +71,7 @@ export async function downloadProfile(
   version: string
 ): Promise<void> {
   try {
-    const profilePath = path.join(
+    const profilePath = pathJoin(
       container.getVersionRoot(version),
       version + ".json"
     );

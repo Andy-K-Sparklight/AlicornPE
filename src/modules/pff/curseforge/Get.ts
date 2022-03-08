@@ -1,4 +1,4 @@
-import { invokeWorker } from "../../../renderer/Schedule";
+import { strDiff0 } from "../../../renderer/Schedule";
 import { safeGet } from "../../commons/Null";
 import { pgot } from "../../download/GotWrapper";
 
@@ -134,7 +134,7 @@ export async function getAddonInfoBySlug(
             }
           }
         }
-        const aRank = await strDiff(i["slug"], slug.toLowerCase());
+        const aRank = strDiff(i["slug"], slug.toLowerCase());
         if (lowestId.length === 0) {
           lowestId = String(i["id"]);
         }
@@ -173,8 +173,8 @@ export async function getAddonInfoBySlug(
   }
 }
 
-async function strDiff(str1: string, str2: string): Promise<number> {
-  return (await invokeWorker("StrDiff", str1, str2)) as number;
+function strDiff(str1: string, str2: string): number {
+  return strDiff0(str1, str2);
 }
 
 export interface ExtraAddonInfo extends AddonInfo {

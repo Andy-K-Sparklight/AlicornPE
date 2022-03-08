@@ -1,4 +1,4 @@
-import { toBase64 } from "js-base64";
+import { netGet } from "../../impl/ClicornAPI";
 import { getActualDataPath, saveDefaultData } from "../config/DataSupport";
 
 /*
@@ -24,14 +24,11 @@ export function whereAJ(): string {
 
 export async function prefetchData(authServer: string): Promise<string> {
   try {
-    return toBase64(
-      await (
-        await fetch(authServer, {
-          method: "GET",
-          credentials: "omit",
-        })
-      ).text()
-    );
+    const res = await netGet(authServer, "{}", 0);
+    if (res.status < 200 || res.status >= 300) {
+      return "";
+    }
+    return res.body.toString("base64");
   } catch {
     return "";
   }

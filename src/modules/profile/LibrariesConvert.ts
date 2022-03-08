@@ -1,4 +1,4 @@
-import path from "path";
+import { pathExtName } from "../../impl/Path";
 import { isNull, safeGet } from "../commons/Null";
 const JAR_SUFFIX = ".jar";
 const SPOILER = ":";
@@ -18,9 +18,7 @@ export function convertLibsByName(
   return obj;
 }
 
-export function makeLibrary(
-  obj: Record<string, unknown>
-): Record<string, unknown> {
+function makeLibrary(obj: Record<string, unknown>): Record<string, unknown> {
   // DONE safe
   if (
     !isNull(safeGet(obj, ["downloads", "artifact", "url"])) &&
@@ -89,7 +87,7 @@ function makeURL(name: string, urlBase: string) {
     if (urlBase.length > 0) {
       if (!urlBase.endsWith("/")) {
         const u = new URL(urlBase);
-        const ext = path.extname(u.pathname);
+        const ext = pathExtName(u.pathname);
         if (KNOWN_EXTS.includes(ext.toLowerCase())) {
           return urlBase;
         }

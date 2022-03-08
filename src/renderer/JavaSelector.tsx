@@ -1,6 +1,5 @@
 import { Refresh } from "@mui/icons-material";
 import {
-  Button,
   Container,
   FormControl,
   IconButton,
@@ -12,10 +11,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { ipcRenderer } from "electron";
-import path from "path";
 import React, { useEffect, useRef, useState } from "react";
-import { installBothJDKs, setBuiltInJava } from "../modules/java/BuiltInJDK";
 import {
   getAllJava,
   getDefaultJavaHome,
@@ -29,7 +25,6 @@ import {
 import { whereJava } from "../modules/java/WhereJava";
 import { setChangePageWarn } from "./GoTo";
 import { ShiftEle } from "./Instruction";
-import { submitInfo, submitSucc, submitWarn } from "./Message";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
@@ -187,32 +182,6 @@ export function JavaSelector(): JSX.Element {
         </FormControl>
         <br />
         <br />
-        <ShiftEle name={"JavaSelectorManual"}>
-          <Button
-            variant={"contained"}
-            color={"primary"}
-            onClick={() => {
-              void (async () => {
-                const d = path.dirname(path.dirname(await remoteSelectJava()));
-                if (d === "." || d.length === 0) {
-                  return;
-                }
-                if (mounted.current) {
-                  const jlCopy = javaList.concat();
-                  if (!jlCopy.includes(d)) {
-                    jlCopy.push(d);
-                    setJavaList(jlCopy);
-                    resetJavaList(jlCopy);
-                    setRefreshBit(!refreshBit);
-                  }
-                  setCurrentJava(d);
-                }
-              })();
-            }}
-          >
-            {tr("JavaSelector.CustomAdd")}
-          </Button>
-        </ShiftEle>
         <Tooltip
           title={
             <Typography className={"smtxt"}>
@@ -249,7 +218,6 @@ export function JavaSelector(): JSX.Element {
         <JavaInfoDisplay
           jInfo={isJavaInfoLoaded ? javaInfo.get(currentJava) : currentJavaInfo}
         />
-        <JavaDownloader />
       </Container>
     </ThemeProvider>
   );
@@ -337,52 +305,4 @@ function JavaInfoDisplay(props: { jInfo?: JavaInfo }): JSX.Element {
       )}
     </>
   );
-}
-
-function JavaDownloader(): JSX.Element {
-  const [isRunning, setRunning] = useState<boolean>(false);
-  const mounted = useRef<boolean>(false);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  return (
-    <>
-      <Typography color={"primary"} className={"smtxt"}>
-        {tr("JavaSelector.HintBuiltIn")}
-      </Typography>
-      <ShiftEle name={"JavaSelectorInstall"} bgfill>
-        <Button
-          variant={"contained"}
-          color={"primary"}
-          disabled={isRunning}
-          onClick={() => {
-            setRunning(true);
-            void (async () => {
-              submitInfo(tr("FirstRun.FetchingJava"));
-              const s = await installBothJDKs();
-              await setBuiltInJava();
-              if (s) {
-                submitSucc(tr("FirstRun.JavaInstalled"));
-              } else {
-                submitWarn(tr("FirstRun.FailedJava"));
-              }
-              window.dispatchEvent(new CustomEvent("ReloadJavaList"));
-              if (mounted.current) {
-                setRunning(false);
-              }
-            })();
-          }}
-        >
-          {tr("JavaSelector.BuiltIn")}
-        </Button>
-      </ShiftEle>
-    </>
-  );
-}
-
-async function remoteSelectJava(): Promise<string> {
-  return String((await ipcRenderer.invoke("selectJava")) || "");
 }

@@ -1,5 +1,4 @@
-import CryptoJS from "crypto-js";
-import { ipcRenderer } from "electron";
+import { AES, enc } from "crypto-js";
 import { CODE_32_SPECIAL } from "../commons/Constants";
 import { getMachineUniqueID } from "./Unique";
 
@@ -18,9 +17,7 @@ export function decryptByMachine(data: string): string {
     return "";
   }
   try {
-    return CryptoJS.AES.decrypt(data, MACHINE_ID_32).toString(
-      CryptoJS.enc.Utf8
-    );
+    return AES.decrypt(data, MACHINE_ID_32).toString(enc.Utf8);
   } catch {
     return "";
   }
@@ -30,36 +27,19 @@ function encryptByMachine(data: string): string {
   if (data === "") {
     return ""; // NULL safe
   }
-  return CryptoJS.AES.encrypt(data, MACHINE_ID_32).toString();
+  return AES.encrypt(data, MACHINE_ID_32).toString();
 }
 
 export function encrypt2(src: string): string {
   if (src === "") {
     return "";
   }
-  try {
-    const r = ipcRenderer.sendSync("encryptSync", src);
-    if (r.length > 0) {
-      return r;
-    } else {
-      return encryptByMachine(src); // If not supported
-    }
-  } catch {
-    return encryptByMachine(src);
-  }
+  return encryptByMachine(src); // I'm sorry, but PE cannot support modern encrypt
 }
 
 export function decrypt2(src: string): string {
   if (src === "") {
     return "";
   }
-  try {
-    const r = ipcRenderer.sendSync("decryptSync", src);
-    if (r.length > 0) {
-      return r;
-    }
-    return decryptByMachine(src);
-  } catch {
-    return decryptByMachine(src);
-  }
+  return decryptByMachine(src);
 }

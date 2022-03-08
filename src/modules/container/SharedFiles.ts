@@ -1,9 +1,16 @@
-import { ensureDir, outputFile, symlink, unlink } from "fs-extra";
-import path from "path";
+import {
+  closeFile,
+  ensureDir,
+  isFileExist,
+  linkFile,
+  openFile,
+  remove,
+  writeFile,
+} from "../../impl/ClicornAPI";
+import { pathBasename, pathDirname, pathJoin } from "../../impl/Path";
 import { tr } from "../../renderer/Translator";
 import { basicHash } from "../commons/BasicHash";
 import { PLACE_HOLDER } from "../commons/Constants";
-import { isFileExist } from "../commons/FileUtil";
 import { getString } from "../config/ConfigSupport";
 import { getActualDataPath } from "../config/DataSupport";
 import { DownloadMeta } from "../download/AbstractDownloader";
@@ -18,13 +25,15 @@ export async function isSharedContainer(
 }
 
 export async function markASC(dir: string): Promise<void> {
-  await outputFile(path.join(dir, ASC_NAME), PLACE_HOLDER, { mode: 0o777 });
+  const f = await openFile(pathJoin(dir, ASC_NAME), "w");
+  await writeFile(f, Buffer.from(PLACE_HOLDER));
+  await closeFile(f);
 }
 
 const STANDALONE_FILE = /forge|client|fabric/i;
 const STANDALONE_PATH = /net[/\\](minecraft(forge)?|fabricmc)/i;
 export function needsStandalone(pt: string): boolean {
-  return STANDALONE_FILE.test(path.basename(pt)) || STANDALONE_PATH.test(pt);
+  return STANDALONE_FILE.test(pathBasename(pt)) || STANDALONE_PATH.test(pt);
 }
 
 export async function fetchSharedFile(meta: DownloadMeta): Promise<boolean> {
@@ -39,9 +48,9 @@ export async function fetchSharedFile(meta: DownloadMeta): Promise<boolean> {
   const root = getString("cx.shared-root");
   let targetFile: string;
   if (root.trim().length > 0) {
-    targetFile = path.join(root, urlSHA);
+    targetFile = pathJoin(root, urlSHA);
   } else {
-    targetFile = getActualDataPath(path.join("cx-shared", urlSHA));
+    targetFile = getActualDataPath(pathJoin("cx-shared", urlSHA));
   }
   let t = 1;
   if (!(await isFileExist(targetFile))) {
@@ -50,13 +59,13 @@ export async function fetchSharedFile(meta: DownloadMeta): Promise<boolean> {
   }
 
   if (t === 1) {
-    await ensureDir(path.dirname(meta.savePath));
+    await ensureDir(pathDirname(meta.savePath));
     try {
-      await symlink(targetFile, meta.savePath, "file");
+      await linkFile(targetFile, meta.savePath);
     } catch {
       try {
-        await unlink(meta.savePath);
-        await symlink(targetFile, meta.savePath, "file");
+        await remove(meta.savePath);
+        await linkFile(targetFile, meta.savePath);
         addDoing(tr("ReadyToLaunch.Linked", `Url=${meta.url}`));
         return true;
       } catch {

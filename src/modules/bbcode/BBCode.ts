@@ -66,24 +66,6 @@ export class StyleComponent extends BaseComponent {
   }
 }
 
-export class URLComponent extends StyleComponent {
-  url: string;
-  display: string;
-
-  constructor(url: string, display?: string) {
-    super(url);
-    this.url = url;
-    this.display = display || url;
-  }
-
-  toBBCode(): string {
-    const baseArr = [super.toBBCode()];
-    baseArr.push("[/url]");
-    baseArr.unshift(`[url=${this.url}]`);
-    return baseArr.toString();
-  }
-}
-
 export class CodeComponent extends StyleComponent {
   constructor(code: string) {
     super(code);
@@ -101,12 +83,6 @@ export class Spoiler extends BaseComponent {
 
   toBBCode(): string {
     return `[spoiler]${this.child}[/spoiler]`;
-  }
-}
-
-export class Page extends BaseComponent {
-  toBBCode(): string {
-    return "[page]";
   }
 }
 
@@ -129,12 +105,6 @@ export class Index extends BaseComponent {
     a.unshift("[index]");
     a.push("[/index]");
     return a.join("");
-  }
-}
-
-export class Line extends BaseComponent {
-  toBBCode(): string {
-    return "[img]static/image/hrline/3.gif[/img]";
   }
 }
 

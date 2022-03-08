@@ -1,6 +1,7 @@
 // The data sent has already been hash encoded and is almost irreversible.
 
-import { abortableUniqueHash } from "../commons/BasicHash";
+import { netGet } from "../../impl/ClicornAPI";
+import { uniqueHash } from "../commons/BasicHash";
 import { getBoolean } from "../config/ConfigSupport";
 import { getMachineUniqueID } from "../security/Unique";
 
@@ -15,16 +16,14 @@ export async function todayPing(): Promise<void> {
   const o = localStorage.getItem(PING_KEY);
   if (d0 !== o) {
     try {
-      const r = await fetch(PING_TARGET, {
-        method: "GET",
-        headers: {
-          "X-Alicorn-Identifier": await abortableUniqueHash(
-            await getMachineUniqueID()
-          ),
-        },
-        credentials: "omit",
-      });
-      if (r.ok) {
+      const r = await netGet(
+        PING_TARGET,
+        JSON.stringify({
+          "X-Alicorn-Identifier": uniqueHash(await getMachineUniqueID()),
+        }),
+        0
+      );
+      if (r.status >= 200 && r.status < 300) {
         localStorage.setItem(PING_KEY, getDay());
         console.log("Ping success!");
       } else {

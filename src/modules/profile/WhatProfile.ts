@@ -59,19 +59,3 @@ export function isLegacy(obj: Record<string, unknown>): boolean {
   }
   return false;
 }
-
-export function inferModLoaderVersionForge(id: string): string {
-  return id.split("-").pop() || "";
-}
-
-const SEMVER_REGEX = /^0\.[0-9]+\.[0-9]+(\.[0-9+])?(\+build\.[0-9]+)?$/i; // Currently Fabric starts from 0
-
-export function inferModLoaderVersionFabric(id: string): string {
-  const a = id.split("-");
-  for (const x of a) {
-    if (SEMVER_REGEX.test(x)) {
-      return x;
-    }
-  }
-  return a[a.length - 2] || "";
-}

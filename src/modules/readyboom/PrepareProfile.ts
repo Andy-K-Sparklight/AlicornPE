@@ -1,4 +1,4 @@
-import objectHash from "object-hash";
+import { basicHash } from "../commons/BasicHash";
 import { getBoolean, getNumber } from "../config/ConfigSupport";
 import { scanCoresInAllMountedContainers } from "../container/ContainerScanner";
 import { getAllMounted, getContainer } from "../container/ContainerUtil";
@@ -95,8 +95,8 @@ async function scanAndActivateHotProfiles(): Promise<void> {
     }
   }
   cores.sort((a, b) => {
-    const hashA = objectHash(a);
-    const hashB = objectHash(b);
+    const hashA = basicHash(JSON.stringify(a));
+    const hashB = basicHash(JSON.stringify(b));
     const pinA = getUsed(hashA);
     const pinB = getUsed(hashB);
     return pinB - pinA;

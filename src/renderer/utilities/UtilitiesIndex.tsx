@@ -1,10 +1,4 @@
-import {
-  Archive,
-  NetworkCell,
-  NextWeek,
-  SettingsEthernet,
-  ShoppingCart,
-} from "@mui/icons-material";
+import { Archive } from "@mui/icons-material";
 import { Box, Card, CardContent, Fade, Grid, Typography } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import React, { useState } from "react";
@@ -40,10 +34,6 @@ export function UtilitiesIndex(): JSX.Element {
         {tr("UtilitiesIndex.Description")}
       </Typography>
       <SimpleUtil icon={<Archive sx={sx} />} name={"PffVisual"} />
-      <SimpleUtil icon={<ShoppingCart sx={sx} />} name={"CarouselBoutique"} />
-      <SimpleUtil icon={<SettingsEthernet sx={sx} />} name={"CutieConnect"} />
-      <SimpleUtil icon={<NetworkCell sx={sx} />} name={"NetCheck"} />
-      <SimpleUtil icon={<NextWeek sx={sx} />} name={"BuildUp"} />
     </>
   );
 }

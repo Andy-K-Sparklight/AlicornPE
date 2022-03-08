@@ -1,10 +1,8 @@
-import os from "os";
-import path from "path";
+import { getUserHome, netGet } from "../impl/ClicornAPI";
+import { pathJoin } from "../impl/Path";
 import { alterPath } from "../modules/commons/FileUtil";
 import { getBoolean, set } from "../modules/config/ConfigSupport";
 import { createNewContainer } from "../modules/container/ContainerWrapper";
-import { getTimeoutController } from "../modules/download/RainbowFetch";
-import { installBothJDKs } from "../modules/java/BuiltInJDK";
 import {
   getAllJava,
   getJavaInfoRaw,
@@ -13,10 +11,8 @@ import {
   setDefaultJavaHome,
 } from "../modules/java/JavaInfo";
 import { whereJava } from "../modules/java/WhereJava";
-import { fetchARMPackage } from "../modules/launch/ARMChair";
 import { isInstBusy, startInst } from "./Instruction";
-import { checkToGoAndDecideJump, loadToGoHook } from "./linkage/AlicornToGo";
-import { submitInfo, submitWarn } from "./Message";
+import { submitInfo } from "./Message";
 import { tr } from "./Translator";
 export function waitInstDone(): Promise<void> {
   return new Promise<void>((res) => {
@@ -42,43 +38,20 @@ async function waitJavaSearch(): Promise<boolean> {
 
 export async function completeFirstRun(): Promise<void> {
   if (!getBoolean("first-run?")) {
-    await checkToGoAndDecideJump();
     return;
   }
   await configureDefaultDirs();
   await createNewContainer(
-    await getMCDefaultRootDir(),
+    getMCDefaultRootDir(),
     tr("FirstRun.Default") || "Minecraft"
   );
   await decideMirror();
   await setupFirstJavaCheckAndCheckToGo();
-  await fetchARMPackage(); // This is selective
   set("first-run?", false);
 }
 
-async function getMCDefaultRootDir(): Promise<string> {
-  switch (os.platform()) {
-    case "win32":
-      return (
-        (await alterPath(
-          path.join(
-            process.env["APPDATA"] ||
-              path.join(os.homedir(), "AppData", "Roaming"),
-            ".minecraft"
-          )
-        )) || path.join(os.homedir(), ".minecraft")
-      );
-    case "darwin":
-      return path.join(
-        os.homedir(),
-        "Library",
-        "Application Support",
-        "minecraft"
-      );
-    case "linux":
-    default:
-      return path.join(os.homedir(), ".minecraft");
-  }
+function getMCDefaultRootDir(): string {
+  return pathJoin(getUserHome(), ".minecraft");
 }
 
 async function setupFirstJavaCheckAndCheckToGo(): Promise<void> {
@@ -88,18 +61,8 @@ async function setupFirstJavaCheckAndCheckToGo(): Promise<void> {
     s = await waitJavaSearch();
   })();
   await waitInstDone();
-  if (!s) {
-    startInst("NoJava");
-    await waitInstDone();
-    submitInfo(tr("FirstRun.FetchingJava"));
-    if (await installBothJDKs()) {
-      submitInfo(tr("FirstRun.JavaInstalled"));
-    } else {
-      submitWarn(tr("FirstRun.JavaFailed"));
-    }
-  } else {
-    startInst("JavaOK");
-  }
+  startInst("JavaOK"); // Not really...
+
   // Delegate this task
   void whereJava(true)
     .then(async () => {
@@ -118,16 +81,11 @@ async function setupFirstJavaCheckAndCheckToGo(): Promise<void> {
     })
     .catch(() => {});
   await waitInstDone();
-  if (await loadToGoHook()) {
-    startInst("HavePack");
-    await waitInstDone();
-    await checkToGoAndDecideJump();
-  }
 }
 
 async function configureDefaultDirs(): Promise<void> {
-  const pff = await alterPath(path.join(os.homedir(), "alicorn", "pff-cache"));
-  const cx = await alterPath(path.join(os.homedir(), "alicorn", "asc-cache"));
+  const pff = await alterPath(pathJoin(getUserHome(), "alicorn", "pff-cache"));
+  const cx = await alterPath(pathJoin(getUserHome(), "alicorn", "asc-cache"));
   if (pff.length > 0) {
     set("pff.cache-root", pff);
     localStorage.setItem("Edited.pff.cache-root", "1");
@@ -152,11 +110,9 @@ async function decideMirror(): Promise<void> {
   for (const [n, u] of Object.entries(URLS)) {
     try {
       const d0 = new Date();
-      const [ac, sti] = getTimeoutController(3000);
-      const r = await fetch(u, { signal: ac.signal });
-      sti();
+      const r = await netGet(u, "{}", 3000);
       const d1 = new Date();
-      if (r.ok) {
+      if (r.status < 200 || r.status >= 300) {
         const dt = d1.getTime() - d0.getTime();
         if (dt < rtt) {
           sl = n;

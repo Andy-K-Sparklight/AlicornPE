@@ -1,7 +1,6 @@
-import { ipcRenderer } from "electron";
-import EventEmitter from "events";
+import { chdir } from "../../impl/ClicornAPI";
+import { EventEmitter } from "../../impl/EventEmitter";
 import { whereAJ } from "../auth/AJHelper";
-import { whereND } from "../auth/NDHelper";
 import { Pair } from "../commons/Collections";
 import { isNull } from "../commons/Null";
 import { MinecraftContainer } from "../container/MinecraftContainer";
@@ -10,7 +9,6 @@ import { setDirtyProfile } from "../readyboom/PrepareProfile";
 import {
   applyAJ,
   applyMemory,
-  applyND,
   applyResolution,
   applyScheme,
   applyServer,
@@ -20,7 +18,7 @@ import {
 import { runMinecraft } from "./MinecraftBootstrap";
 
 // Launch and return ID
-export function launchProfile(
+export async function launchProfile(
   profile: GameProfile,
   container: MinecraftContainer,
   jExecutable: string,
@@ -33,8 +31,6 @@ export function launchProfile(
     useServer?: boolean;
     server?: string;
     ajPrefetch?: string;
-    useNd?: boolean;
-    ndServerId?: string;
     javaVersion?: number;
     gc1?: string;
     gc2?: string;
@@ -42,7 +38,7 @@ export function launchProfile(
     demo?: boolean;
     isolated?: boolean;
   }
-): string {
+): Promise<number> {
   const vmArgs = generateVMArgs(profile, container);
   const gameArgs = generateGameArgs(
     profile,
@@ -53,9 +49,6 @@ export function launchProfile(
   );
   const ajArgs = policies.useAj
     ? applyAJ(whereAJ(), policies.ajHost || "", policies.ajPrefetch || "")
-    : [];
-  const ndArgs = policies.useNd
-    ? applyND(whereND(), policies.ndServerId || "")
     : [];
   const resolutions = !isNull(policies.resolution)
     ? applyResolution(
@@ -72,33 +65,21 @@ export function launchProfile(
     memArgs = applyScheme(policies.gc1, policies.gc2, policies.javaVersion);
   }
   memArgs = memArgs.concat(applyMemory(policies.maxMem || 0));
-  let totalArgs: string[];
-  // I write this judge here in case of you still call ND and AJ both
-  if (policies.useNd) {
-    totalArgs = ndArgs
-      .concat(memArgs)
-      .concat(vmArgs)
-      .concat(gameArgs)
-      .concat(serverArgs)
-      .concat(resolutions);
-  } else {
-    totalArgs = ajArgs
-      .concat(memArgs)
-      .concat(vmArgs)
-      .concat(gameArgs)
-      .concat(serverArgs)
-      .concat(resolutions);
-  }
+  const totalArgs = ajArgs // Will be empty if not using
+    .concat(memArgs)
+    .concat(vmArgs)
+    .concat(gameArgs)
+    .concat(serverArgs)
+    .concat(resolutions);
 
   const ir = policies.isolated
     ? container.getVersionRoot(profile.id)
     : container.rootDir;
 
-  process.chdir(ir);
-  ipcRenderer.send("changeDir", ir);
+  await chdir(ir);
 
   console.log(totalArgs);
-  return runMinecraft(totalArgs, jExecutable, container, ir, emitter);
+  return await runMinecraft(totalArgs, jExecutable, container, ir, emitter);
 }
 
 const SAFE_LAUNCH_SET: Set<string> = new Set();

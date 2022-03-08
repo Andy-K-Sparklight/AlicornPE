@@ -23,7 +23,6 @@ import {
 } from "../../modules/pff/curseforge/Get";
 import { ModMeta } from "../../modules/pff/virtual/ModDefine";
 import { getResolvers } from "../../modules/pff/virtual/PffWrapper";
-import { CursePlusPlusModResolver } from "../../modules/pff/virtual/Resolver";
 import { jumpTo, triggerSetPage } from "../GoTo";
 import { submitInfo, submitSucc, submitWarn } from "../Message";
 import { ALICORN_DEFAULT_THEME_LIGHT, isBgDark } from "../Renderer";
@@ -88,9 +87,6 @@ export function PffVisual(): JSX.Element {
                               const rsvs = getResolvers(slug);
                               const rets = await Promise.allSettled(
                                 rsvs.map((r) => {
-                                  if (r instanceof CursePlusPlusModResolver) {
-                                    return []; // This is too slow and lacks features.
-                                  }
                                   return r.searchMods(
                                     getNumber("pff.page-size", 20)
                                   );

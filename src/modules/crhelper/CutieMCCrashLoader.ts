@@ -47,8 +47,8 @@ export const CMC_CRASH_LOADER: CrashLoader = {
       match: "Could not find required mod",
       script: ((c: CrashReportCursor): CrashLoaderReport => {
         const l = c.getLine();
-        const EXTRACT_REGEX = /(?<=\{)[0-9A-Za-z_]+?(?= @ \[)/;
-        const m = l?.match(EXTRACT_REGEX) || "";
+        const EXTRACT_REGEX = /\{[0-9A-Za-z_]+?(?= @ \[)/;
+        const m = (l?.match(EXTRACT_REGEX) || "").slice(1);
         if (m.length > 0) {
           return {
             reason: "缺少依赖 Mod：" + m,

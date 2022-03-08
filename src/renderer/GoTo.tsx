@@ -1,12 +1,9 @@
-import { ipcRenderer } from "electron";
 import { expose } from "../modules/boticorn/FTable";
 import { getBoolean, saveAndReloadMain } from "../modules/config/ConfigSupport";
 import { loadMirror } from "../modules/download/Mirror";
-import { waitUpdateFinished } from "../modules/selfupdate/Updator";
-import { intervalSaveData, remoteHideWindow } from "./App";
+import { intervalSaveData } from "./App";
 import { setContainerListDirty } from "./ContainerManager";
 import { isInstBusy } from "./Instruction";
-import { terminateCadanceProc } from "./linkage/Cadance";
 
 expose({ jumpTo, triggerSetPage });
 
@@ -51,15 +48,9 @@ export function jumpTo(target: string, keepHistory = true): void {
 function ifLeavingConfigThenReload(): void {
   if (sessionStorage.getItem("Options.Reload") === "1") {
     sessionStorage.removeItem("Options.Reload");
-    remoteHideWindow();
-  terminateCadanceProc();
-    waitUpdateFinished(() => {
-      intervalSaveData()
-        .then(() => {
-          ipcRenderer.send("reload");
-        })
-        .catch(() => {});
-    });
+    intervalSaveData()
+      .then(() => {})
+      .catch(() => {});
   } else if (window.location.hash.includes("Options")) {
     void saveAndReloadMain();
     void loadMirror();

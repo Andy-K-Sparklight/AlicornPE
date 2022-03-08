@@ -1,12 +1,4 @@
-import {
-  Add,
-  CopyAll,
-  Eject,
-  FolderOpen,
-  Input,
-  LayersClear,
-  LinkOff,
-} from "@mui/icons-material";
+import { Add, Eject, Input, LinkOff } from "@mui/icons-material";
 import {
   Box,
   Button,
@@ -29,15 +21,18 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { ipcRenderer, shell } from "electron";
-import fs from "fs-extra";
-import os from "os";
-import path from "path";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { throttle } from "throttle-debounce";
-import { abortableBasicHash, basicHash } from "../modules/commons/BasicHash";
-import { chkPermissions, isFileExist } from "../modules/commons/FileUtil";
+import { getUserHome, isFileExist, readDirectory } from "../impl/ClicornAPI";
+import {
+  pathBasename,
+  pathDirname,
+  pathJoin,
+  pathNormalize,
+} from "../impl/Path";
+import { basicHash } from "../modules/commons/BasicHash";
+import { chkPermissions } from "../modules/commons/FileUtil";
 import { scanCoresIn } from "../modules/container/ContainerScanner";
 import {
   getAllContainerPaths,
@@ -45,38 +40,24 @@ import {
   getAllMounted,
   getAllNotMounted,
   getContainer,
-  getDirSize,
   isMounted,
   mount,
   unmount,
 } from "../modules/container/ContainerUtil";
 import {
-  clearContainer,
   createNewContainer,
-  forkContainer,
   unlinkContainer,
 } from "../modules/container/ContainerWrapper";
 import { MinecraftContainer } from "../modules/container/MinecraftContainer";
 import { isSharedContainer } from "../modules/container/SharedFiles";
-import { DownloadMeta } from "../modules/download/AbstractDownloader";
 import {
-  addDoing,
   getDoing,
   subscribeDoing,
   unsubscribeDoing,
-  wrappedDownloadFile,
 } from "../modules/download/DownloadWrapper";
-import { isWebFileExist } from "../modules/download/RainbowFetch";
-import { deployIJPack } from "../modules/pff/modpack/InstallIJModpack";
-import { wrappedInstallModpack } from "../modules/pff/modpack/InstallModpack";
-import { setChangePageWarn } from "./GoTo";
 import { Icons } from "./Icons";
-import { submitSucc, submitWarn } from "./Message";
-import {
-  FailedHint,
-  OperatingHint,
-  OperatingHintCustom,
-} from "./OperatingHint";
+import { submitSucc } from "./Message";
+import { FailedHint, OperatingHintCustom } from "./OperatingHint";
 import { hasEdited } from "./Options";
 import {
   ALICORN_DEFAULT_THEME_DARK,
@@ -203,13 +184,9 @@ function SingleContainerDisplay(props: {
   const classes = useCardStyles();
   const mounted = useRef<boolean>(false);
   const [deleteAskOpen, setOpen] = useState(false);
-  const [clearAskOpen, setClearOpen] = useState(false);
-  const [operating, setOperating] = useState(false);
   const [coreCount, setCount] = useState(-1);
   const [isASC, setASCBit] = useState<boolean | null>(null);
   const [refresh, setRefresh] = useState(false);
-  const [size, setSize] = useState(-1);
-  const [fullSize, setFullSize] = useState(-1);
   const [showBtn, setShowBtn] = useState(false);
   useEffect(() => {
     mounted.current = true;
@@ -236,27 +213,8 @@ function SingleContainerDisplay(props: {
       mounted.current = false;
     };
   }, [refresh]);
-  useEffect(() => {
-    if (props.isMounted) {
-      void getDirSize(props.container.rootDir).then((r) => {
-        if (mounted.current) {
-          setSize(r);
-        }
-      });
-    }
-  }, [props.isMounted]);
-  useEffect(() => {
-    if (isASC && props.isMounted) {
-      void getDirSize(props.container.rootDir, true).then((r) => {
-        if (mounted.current) {
-          setFullSize(r);
-        }
-      });
-    }
-  }, [isASC]);
   return (
     <>
-      <OperatingHint open={operating} />
       <Card
         sx={{
           backgroundColor: props.isMounted ? "primary.main" : "primary.light",
@@ -306,53 +264,6 @@ function SingleContainerDisplay(props: {
                         <LinkOff />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip
-                      title={
-                        <Typography className={"smtxt"}>
-                          {tr("ContainerManager.Fork")}
-                        </Typography>
-                      }
-                    >
-                      <IconButton
-                        color={"inherit"}
-                        className={classes.operateButton}
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          setOperating(true);
-                          setChangePageWarn(true);
-                          try {
-                            await forkContainer(props.container);
-                            submitSucc(tr("ContainerManager.Forked"));
-                          } catch (e) {
-                            submitWarn(tr("ContainerManager.FailedToFork"));
-                          }
-                          setChangePageWarn(false);
-                          setOperating(false);
-                          setContainerListDirty();
-                          setRefresh(!refresh);
-                        }}
-                      >
-                        <CopyAll />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip
-                      title={
-                        <Typography className={"smtxt"}>
-                          {tr("ContainerManager.Clear")}
-                        </Typography>
-                      }
-                    >
-                      <IconButton
-                        color={"inherit"}
-                        className={classes.operateButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setClearOpen(true);
-                        }}
-                      >
-                        <LayersClear />
-                      </IconButton>
-                    </Tooltip>
                   </Grid>
                   <Grid container direction={"row"}>
                     {props.isMounted ? (
@@ -387,26 +298,6 @@ function SingleContainerDisplay(props: {
                         </IconButton>
                       </Tooltip>
                     )}
-                    <Tooltip
-                      title={
-                        <Typography className={"smtxt"}>
-                          {tr("ContainerManager.OpenInDir")}
-                        </Typography>
-                      }
-                    >
-                      <IconButton
-                        color={"inherit"}
-                        className={classes.operateButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          try {
-                            shell.showItemInFolder(props.container.rootDir);
-                          } catch {}
-                        }}
-                      >
-                        <FolderOpen />
-                      </IconButton>
-                    </Tooltip>
                   </Grid>
                 </Grid>
                 <Grid item>
@@ -464,45 +355,6 @@ function SingleContainerDisplay(props: {
                 </DialogActions>
               </DialogContent>
             </Dialog>
-            <Dialog
-              open={clearAskOpen}
-              onClose={() => {
-                setClearOpen(false);
-              }}
-            >
-              <DialogTitle>{tr("ContainerManager.AskClear")}</DialogTitle>
-              <DialogContent>
-                <DialogContentText>
-                  {tr(
-                    "ContainerManager.AskClearDetail",
-                    `ID=${props.container.id}`
-                  )}
-                </DialogContentText>
-                <DialogActions>
-                  <Button
-                    onClick={async () => {
-                      setClearOpen(false);
-                      setOperating(true);
-                      await clearContainer(props.container.id);
-                      unlinkContainer(props.container.id);
-                      setContainerListDirty();
-                      if (mounted.current) {
-                        setOperating(false);
-                      }
-                    }}
-                  >
-                    {tr("ContainerManager.Yes")}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setClearOpen(false);
-                    }}
-                  >
-                    {tr("ContainerManager.No")}
-                  </Button>
-                </DialogActions>
-              </DialogContent>
-            </Dialog>
           </ThemeProvider>
           <Typography
             variant={"h6"}
@@ -535,35 +387,6 @@ function SingleContainerDisplay(props: {
                       : "ContainerManager.Type.Physical"
                   )}
               </Typography>
-              <Typography
-                sx={{ color: isBgDark() ? "secondary.light" : undefined }}
-                className={classes.text}
-                gutterBottom
-              >
-                {(() => {
-                  let opac = "";
-                  if (size > 0) {
-                    opac += tr(
-                      "ContainerManager.Size",
-                      `Size=${Math.round(size / 1048576)}`
-                    );
-                    if (isASC && fullSize > size) {
-                      opac +=
-                        " - " +
-                        tr(
-                          "ContainerManager.DiscountASC",
-                          `Rate=${
-                            Math.round(((fullSize - size) * 1000) / fullSize) /
-                            10
-                          }`
-                        );
-                    }
-                    return opac;
-                  } else {
-                    return tr("ContainerManager.Calculating");
-                  }
-                })()}
-              </Typography>
             </>
           ) : (
             ""
@@ -588,7 +411,7 @@ async function validateDir(n: string): Promise<boolean> {
   if (n.length <= 0) {
     return true;
   }
-  n = path.resolve(n);
+  n = pathNormalize(n);
   if (getAllContainerPaths().includes(n)) {
     return false;
   }
@@ -598,11 +421,16 @@ async function validateDir(n: string): Promise<boolean> {
   if (!(await isFileExist(n))) {
     return true;
   }
-  return (await fs.stat(n)).isDirectory();
+  try {
+    await readDirectory(n);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function genContainerName(s: string): string {
-  const s2 = path.basename(s).split(".");
+  const s2 = pathBasename(s).split(".");
   if (s2.length >= 2) {
     s2.pop();
   }
@@ -631,12 +459,12 @@ function AddNewContainer(props: {
   const [selectedDir, setSelected] = useState(
     props.modpack
       ? !isURL(props.modpack)
-        ? path.join(
-            path.dirname(props.modpack),
+        ? pathJoin(
+            pathDirname(props.modpack),
             "Modpack-" + basicHash(props.modpack).slice(0, 6)
           )
-        : path.join(
-            os.homedir(),
+        : pathJoin(
+            getUserHome(),
             "OnlineModpack-" + basicHash(props.modpack).slice(0, 6)
           )
       : ""
@@ -665,32 +493,6 @@ function AddNewContainer(props: {
       await createContainer(usedName, selectedDir, createASC);
     } catch (e) {
       props.setFailed(String(e));
-    }
-    if (allowModpack) {
-      addDoing(tr("ContainerManager.FetchingModpack"));
-      let mp = await getTempStorePath(modpackPath);
-      if (!(await isFileExist(modpackPath))) {
-        if (
-          (await wrappedDownloadFile(new DownloadMeta(modpackPath, mp))) !== 1
-        ) {
-          props.setFailed(tr("ContainerManager.FailedToFetch"));
-        }
-      } else {
-        mp = modpackPath;
-      }
-
-      try {
-        const s = await fs.stat(mp);
-        if (mp.endsWith(".zip") || s.isDirectory()) {
-          await wrappedInstallModpack(getContainer(usedName), mp);
-        }
-        if (mp.endsWith(".json")) {
-          await deployIJPack(getContainer(usedName), mp);
-        }
-        props.refresh();
-      } catch (e) {
-        props.setFailed(String(e));
-      }
     }
     setName("");
     setSelected("");
@@ -742,51 +544,29 @@ function AddNewContainer(props: {
             value={usedName}
           />
           {/* Choose Dir */}
-          <>
-            <TextField
-              error={dirError}
-              className={classes.input}
-              color={"secondary"}
-              margin={"dense"}
-              onChange={(e) => {
-                setSelected(e.target.value);
-                void validateDir(e.target.value).then((b) => {
-                  setDirError(!b);
-                });
-              }}
-              label={
-                dirError
-                  ? tr("ContainerManager.InvalidDir")
-                  : tr("ContainerManager.Dir")
-              }
-              type={"text"}
-              spellCheck={false}
-              fullWidth
-              variant={"outlined"}
-              value={selectedDir}
-            />
 
-            <Button
-              className={classes.inputDark}
-              type={"button"}
-              sx={{
-                display: "inline",
-              }}
-              variant={"outlined"}
-              onClick={async () => {
-                const d = await remoteSelectDir();
-                if (d.length === 0) {
-                  return;
-                }
-                setSelected(d);
-                void validateDir(d).then((b) => {
-                  setDirError(!b);
-                });
-              }}
-            >
-              {tr("ContainerManager.Select")}
-            </Button>
-          </>
+          <TextField
+            error={dirError}
+            className={classes.input}
+            color={"secondary"}
+            margin={"dense"}
+            onChange={(e) => {
+              setSelected(e.target.value);
+              void validateDir(e.target.value).then((b) => {
+                setDirError(!b);
+              });
+            }}
+            label={
+              dirError
+                ? tr("ContainerManager.InvalidDir")
+                : tr("ContainerManager.Dir")
+            }
+            type={"text"}
+            spellCheck={false}
+            fullWidth
+            variant={"outlined"}
+            value={selectedDir}
+          />
           <RadioGroup
             row
             onChange={(e) => {
@@ -838,69 +618,6 @@ function AddNewContainer(props: {
             }
             label={tr("ContainerManager.CreateModpack")}
           />
-          {/* Choose Modpack */}
-          <>
-            <DialogContentText
-              sx={{
-                display: allowModpack ? "inherit" : "none",
-              }}
-            >
-              {tr("ContainerManager.ModpackWarn")}
-            </DialogContentText>
-            <TextField
-              error={modpackError}
-              className={classes.input}
-              color={"secondary"}
-              autoFocus
-              sx={{
-                display: allowModpack ? "inherit" : "none",
-              }}
-              margin={"dense"}
-              onChange={(e) => {
-                setModpackPath(e.target.value);
-                void isFileExist(e.target.value).then((b) => {
-                  if (b) {
-                    void isWebFileExist(e.target.value)
-                      .then((b) => {
-                        setModpackError(!b);
-                      })
-                      .catch(() => {
-                        setModpackError(true);
-                      });
-                  }
-                  setModpackError(!b);
-                });
-              }}
-              label={
-                modpackError
-                  ? tr("ContainerManager.InvalidModpackPath")
-                  : tr("ContainerManager.ModpackPath")
-              }
-              type={"text"}
-              spellCheck={false}
-              fullWidth
-              variant={"outlined"}
-              value={modpackPath}
-            />
-
-            <Button
-              className={classes.inputDark}
-              type={"button"}
-              sx={{
-                display: allowModpack ? "inherit" : "none",
-              }}
-              variant={"contained"}
-              onClick={async () => {
-                const d = await remoteSelectModpack();
-                setModpackPath(d);
-                void isFileExist(d).then((b) => {
-                  setModpackError(!b);
-                });
-              }}
-            >
-              {tr("ContainerManager.ChooseModpack")}
-            </Button>
-          </>
         </DialogContent>
         <DialogActions>
           <Button
@@ -938,25 +655,10 @@ function AddNewContainer(props: {
   );
 }
 
-export async function remoteSelectDir(): Promise<string> {
-  return String((await ipcRenderer.invoke("selectDir")) || "");
-}
-
-async function remoteSelectModpack(): Promise<string> {
-  return String((await ipcRenderer.invoke("selectModpack")) || "");
-}
-
 async function createContainer(
   id: string,
   dir: string,
   asc = false
 ): Promise<void> {
   await createNewContainer(dir, id, asc);
-}
-async function getTempStorePath(u: string): Promise<string> {
-  return path.join(
-    os.tmpdir(),
-    "alicorn-modpacks",
-    (await abortableBasicHash(u)) + (u.endsWith(".json") ? ".json" : ".zip")
-  );
 }

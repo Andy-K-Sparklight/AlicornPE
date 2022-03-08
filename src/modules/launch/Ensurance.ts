@@ -1,4 +1,4 @@
-import fs from "fs-extra";
+import { closeFile, openFile, readFile } from "../../impl/ClicornAPI";
 import { isNull } from "../commons/Null";
 import { getBoolean } from "../config/ConfigSupport";
 import { MinecraftContainer } from "../container/MinecraftContainer";
@@ -160,9 +160,13 @@ export async function ensureAllAssets(
       resolved: 0,
       operateRecord: [],
     };
-    const obj = await fs.readJSON(
-      container.getAssetsIndexPath(profile.assetIndex.id)
+    const fd = await openFile(
+      container.getAssetsIndexPath(profile.assetIndex.id),
+      "r"
     );
+    const dt = await readFile(fd);
+    await closeFile(fd);
+    const obj = JSON.parse(dt.toString());
     const il = profile.assetIndex.id.toLowerCase() === "legacy";
     const assetIndexFileMeta = AssetIndexFileMeta.fromObject(obj, il);
     const allObjects = assetIndexFileMeta.objects.concat();

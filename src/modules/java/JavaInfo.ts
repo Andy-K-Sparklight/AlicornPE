@@ -1,60 +1,51 @@
-import childProcess from "child_process";
-import os from "os";
-import path from "path";
+import { getOsType, isFileExist, spawnProc } from "../../impl/ClicornAPI";
+import { pathJoin, pathNormalize } from "../../impl/Path";
+import { waitProcessEnd } from "../../impl/Process";
 import { ALICORN_DATA_SUFFIX, PLACE_HOLDER } from "../commons/Constants";
-import { isFileExist } from "../commons/FileUtil";
 import { buildMap, parseMap } from "../commons/MapUtil";
 import { loadData, saveData } from "../config/DataSupport";
 
 const JAVA_RECORD_BASE = "java.record" + ALICORN_DATA_SUFFIX;
 const LATEST_TAG = "?LATEST>>";
 let JDT = new Map<string, string>();
-const JAVA = (() => {
-  if (os.platform() === "win32") {
-    return path.join("bin", "java.exe");
+let JAVA: string;
+let JAVA_ORACLE: string;
+
+const JAVA_INFO_CACHE: Map<string, string[]> = new Map();
+
+export function initJavaInfo(): void {
+  if (getOsType() === "win32") {
+    JAVA = pathJoin("bin", "java.exe");
   } else {
-    return path.join("bin", "java");
+    JAVA = pathJoin("bin", "java");
   }
-})();
-const JAVA_ORACLE = path.join("javapath", "java.exe");
+  JAVA_ORACLE = pathJoin("javapath", "java.exe");
+}
 
-const JAVA_INFO_CACHE: Map<string, string> = new Map();
-
-export async function getJavaInfoRaw(jHome: string): Promise<string> {
+export async function getJavaInfoRaw(jHome: string): Promise<string[]> {
   const p = await getJavaRunnable(jHome, false);
   if (p === "") {
-    return "";
+    return [];
   }
-  const jRPath = path.resolve(p);
+  const jRPath = pathNormalize(p);
   if (JAVA_INFO_CACHE.has(jRPath)) {
-    return JAVA_INFO_CACHE.get(jRPath) || "";
+    return JAVA_INFO_CACHE.get(jRPath) || [];
   }
-  return new Promise<string>((resolve, reject) => {
-    childProcess.execFile(jRPath, ["-version"], (e, stdout, stderr) => {
-      if (e) {
-        reject();
-      } else {
-        if (stdout.trim().length > 0) {
-          JAVA_INFO_CACHE.set(jRPath, stdout);
-          resolve(stdout);
-        } else if (stderr.trim().length > 0) {
-          JAVA_INFO_CACHE.set(jRPath, stderr);
-          resolve(stderr);
-        } else {
-          reject();
-        }
-      }
-    });
-  });
+  const pc = await spawnProc(`"${jRPath}" -version 2>&1`);
+  const [stdout] = await waitProcessEnd(pc);
+  if (stdout.length <= 0) {
+    return [];
+  }
+  return stdout;
 }
 
 export async function getJavaRunnable(
   jHome: string,
   useName = true
 ): Promise<string> {
-  const p1 = path.resolve(path.join(jHome, JAVA));
+  const p1 = pathJoin(jHome, JAVA);
   if (!(await isFileExist(p1))) {
-    const p2 = path.resolve(path.join(jHome, JAVA_ORACLE));
+    const p2 = pathJoin(jHome, JAVA_ORACLE);
     if (!(await isFileExist(p2))) {
       return useName ? "java" : "";
     }
@@ -100,21 +91,20 @@ export async function saveJDT(): Promise<void> {
   await saveData(JAVA_RECORD_BASE, buildMap(JDT));
 }
 
-export function parseJavaInfoRaw(ji: string): {
+export function parseJavaInfoRaw(ji: string[]): {
   spec: string;
   runtime: string;
   vm: string;
 } {
-  const a = ji.split(os.EOL);
   return {
-    spec: a[0] || "",
-    runtime: a[1] || "",
-    vm: a[2] || "",
+    spec: ji[0] || "",
+    runtime: ji[1] || "",
+    vm: ji[2] || "",
   };
 }
 
-const VERSION_MATCH = /(?<=["'])[0-9._\-a-z]+?(?=["'])/i;
-const JAVA_9E_MATCH = /(?<=1\.)[0-9](?=.*)/i;
+const VERSION_MATCH = /["'][0-9._\-a-z]+?(?=["'])/i;
+const JAVA_9E_MATCH = /1\.[0-9](?=.*)/i;
 const JAVA_NEW_MATCH = /^[0-9]{2,}(?=[.-]+?)/i;
 const BITS_32 = /32-bit/i;
 const CLIENT_SIDE = /client\.*vm/i;
@@ -140,13 +130,13 @@ export function parseJavaInfo(ji: {
   if (!v) {
     ev = "Unknown";
   } else {
-    ev = v[0];
+    ev = v[0].slice(1);
   }
   let bv = 0;
   if (JAVA_NEW_MATCH.test(ev)) {
     bv = parseInt((ev.match(JAVA_NEW_MATCH) || ["0"])[0]);
   } else if (JAVA_9E_MATCH.test(ev)) {
-    bv = parseInt((ev.match(JAVA_9E_MATCH) || ["0"])[0]);
+    bv = parseInt((ev.match(JAVA_9E_MATCH) || ["1.0"])[0].slice(2));
   }
   return {
     rootVersion: bv,

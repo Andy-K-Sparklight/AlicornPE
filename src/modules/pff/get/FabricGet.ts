@@ -1,4 +1,4 @@
-import fs from "fs-extra";
+import { remove } from "../../../impl/ClicornAPI";
 import { basicHash } from "../../commons/BasicHash";
 import { Pair } from "../../commons/Collections";
 import { FABRIC_META_ROOT } from "../../commons/Constants";
@@ -122,7 +122,7 @@ export async function removeFabricInstaller(
   container: MinecraftContainer
 ): Promise<void> {
   try {
-    await fs.remove(
+    await remove(
       container.getTempFileStorePath(
         generateFabricJarName(basicHash(url).slice(0, 8))
       )

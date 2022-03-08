@@ -1,16 +1,13 @@
 import {
   Check,
   DataObject,
-  Extension,
   FindInPage,
   Flag,
   FlashOn,
-  FlightLand,
   FlightTakeoff,
   Person,
-  RssFeed,
   SportsScore,
-  ViewModule,
+  ViewModule
 } from "@mui/icons-material";
 import {
   Box,
@@ -39,19 +36,18 @@ import {
   TextField,
   ThemeProvider,
   Tooltip,
-  Typography,
+  Typography
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import copy from "copy-to-clipboard";
-import EventEmitter from "events";
-import os from "os";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { getFreeMemory, getTotalMemory } from "../impl/ClicornAPI";
+import { EventEmitter } from "../impl/EventEmitter";
 import { Account } from "../modules/auth/Account";
 import {
   AccountType,
   getPresentAccounts,
-  querySkinFor,
+  querySkinFor
 } from "../modules/auth/AccountUtil";
 import { prefetchData } from "../modules/auth/AJHelper";
 import { AuthlibAccount } from "../modules/auth/AuthlibAccount";
@@ -64,29 +60,24 @@ import {
   MS_LAST_USED_REFRESH_KEY,
   MS_LAST_USED_USERNAME_KEY,
   MS_LAST_USED_UUID_KEY,
-  MS_LAST_USED_XUID_KEY,
+  MS_LAST_USED_XUID_KEY
 } from "../modules/auth/MicrosoftAccount";
-import { Nide8Account } from "../modules/auth/Nide8Account";
-import { uniqueHash } from "../modules/commons/BasicHash";
 import { Pair } from "../modules/commons/Collections";
 import {
   PROCESS_END_GATE,
-  PROCESS_LOG_GATE,
-  ReleaseType,
+  PROCESS_LOG_GATE
 } from "../modules/commons/Constants";
 import { isNull } from "../modules/commons/Null";
 import {
   getBoolean,
   getNumber,
-  getString,
+  getString
 } from "../modules/config/ConfigSupport";
 import { getContainer } from "../modules/container/ContainerUtil";
 import { MinecraftContainer } from "../modules/container/MinecraftContainer";
-import { killEdge, runEdge } from "../modules/cutie/BootEdge";
-import { acquireCode, deactiveCode } from "../modules/cutie/Hoofoff";
 import {
   getWrapperStatus,
-  WrapperStatus,
+  WrapperStatus
 } from "../modules/download/DownloadWrapper";
 import {
   getAllJava,
@@ -96,7 +87,7 @@ import {
   getLegacyJDK,
   getNewJDK,
   parseJavaInfo,
-  parseJavaInfoRaw,
+  parseJavaInfoRaw
 } from "../modules/java/JavaInfo";
 import { autoMemory } from "../modules/launch/ArgsGenerator";
 import {
@@ -105,45 +96,36 @@ import {
   ensureClient,
   ensureLibraries,
   ensureLog4jFile,
-  ensureNatives,
+  ensureNatives
 } from "../modules/launch/Ensurance";
 import {
   launchProfile,
   markSafeLaunch,
-  shouldSafeLaunch,
+  shouldSafeLaunch
 } from "../modules/launch/LaunchTool";
 import { LaunchTracker } from "../modules/launch/LaunchTracker";
-import { stopMinecraft } from "../modules/launch/MinecraftBootstrap";
-import { prepareModsCheckFor } from "../modules/modx/ModDynLoad";
 import { GameProfile } from "../modules/profile/GameProfile";
 import {
   isProfileIsolated,
-  loadProfile,
+  loadProfile
 } from "../modules/profile/ProfileLoader";
 import {
   dropAccountPromise,
-  waitMSAccountReady,
+  waitMSAccountReady
 } from "../modules/readyboom/AccountMaster";
 import {
   setLastUsed,
-  waitProfileReady,
+  waitProfileReady
 } from "../modules/readyboom/PrepareProfile";
-import { getMachineUniqueID } from "../modules/security/Unique";
-import { getEchos } from "../modules/selfupdate/Echo";
-import {
-  initLocalYggdrasilServer,
-  ROOT_YG_URL,
-  skinTypeFor,
-} from "../modules/skin/LocalYggdrasilServer";
 import { jumpTo, setChangePageWarn, triggerSetPage } from "./GoTo";
 import { Icons } from "./Icons";
 import { ShiftEle } from "./Instruction";
-import { submitError, submitSucc, submitWarn } from "./Message";
+import { submitError, submitWarn } from "./Message";
 import { YNDialog } from "./OperatingHint";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
-  isBgDark,
+  isBgDark
 } from "./Renderer";
 import { SkinDisplay2D, SkinDisplay3D } from "./SkinDisplay";
 import { addStatistics } from "./Statistics";
@@ -151,14 +133,9 @@ import {
   AlicornTheme,
   fullWidth,
   useFormStyles,
-  useInputStyles,
+  useInputStyles
 } from "./Stylex";
 import { randsl, tr } from "./Translator";
-import {
-  HOOFOFF_CENTRAL,
-  NETWORK_PORT,
-  QUERY_PORT,
-} from "./utilities/CutieConnect";
 import { SpecialKnowledge } from "./Welcome";
 import { toReadableType, YggdrasilForm } from "./YggdrasilAccountManager";
 
@@ -260,7 +237,6 @@ enum LaunchingStatus {
   PENDING = "Pending",
   ACCOUNT_AUTHING = "PerformingAuth",
   FILES_FILLING = "CheckingFiles",
-  MODS_PREPARING = "PreparingMods",
   ARGS_GENERATING = "GeneratingArgs",
   FINISHED = "Finished",
 }
@@ -268,7 +244,6 @@ const LAUNCH_STEPS = [
   "Pending",
   "PerformingAuth",
   "CheckingFiles",
-  "PreparingMods",
   "GeneratingArgs",
   "Finished",
 ];
@@ -278,9 +253,8 @@ const LAUNCH_STEPS_ICONS: Record<string, any> = {
   1: <Flag fontSize={"small"} />,
   2: <Person fontSize={"small"} />,
   3: <FindInPage fontSize={"small"} />,
-  4: <Extension fontSize={"small"} />,
-  5: <DataObject fontSize={"small"} />,
-  6: <SportsScore fontSize={"small"} />,
+  4: <DataObject fontSize={"small"} />,
+  5: <SportsScore fontSize={"small"} />,
 };
 
 function LaunchStepIconRoot(props: {
@@ -352,9 +326,6 @@ function Launching(props: {
   let [selectedAccount, setSelectedAccount] = useState<Account>();
   const [selecting, setSelecting] = useState<boolean>(false);
   const [ws, setWrapperStatus] = useState<WrapperStatus>(getWrapperStatus());
-  const [lanPort, setLanPort] = useState(0);
-  const [openLanWindow, setOpenLanWindow] = useState(false);
-  const [openLanButtonEnabled, setOpenLanButtonEnabled] = useState(false);
   const currentEM = useRef<EventEmitter>();
   const [dry, setDry] = useState(false);
   const [secure, setSecure] = useState(false);
@@ -381,59 +352,6 @@ function Launching(props: {
     };
   }, []);
   useEffect(() => {
-    const fun = (e: Event) => {
-      if (e instanceof CustomEvent) {
-        if (typeof e.detail === "number" && !isNaN(e.detail)) {
-          setLanPort(e.detail);
-          setOpenLanButtonEnabled(true);
-          setOpenLanWindow(true);
-        }
-      }
-    };
-    window.addEventListener("WorldServing", fun);
-    return () => {
-      window.removeEventListener("WorldServing", fun);
-    };
-  }, []);
-  useEffect(() => {
-    const fun = async () => {
-      setLanPort(0);
-      setOpenLanButtonEnabled(false);
-      setOpenLanWindow(false);
-      const m = sessionStorage.getItem(CODE_KEY + lanPort);
-      if (m) {
-        await deactiveCode(
-          m,
-          getString("hoofoff.central", HOOFOFF_CENTRAL, true) + ":" + QUERY_PORT
-        );
-        sessionStorage.removeItem(CODE_KEY + lanPort);
-        submitSucc(tr("ReadyToLaunch.CodeDeactivated"));
-      }
-    };
-    window.addEventListener("WorldStoppedServing", fun);
-    return () => {
-      window.removeEventListener("WorldStoppedServing", fun);
-    };
-  });
-  useEffect(() => {
-    const fun = async () => {
-      let ke = false;
-      if (lanPort > 0) {
-        ke = true;
-      }
-      setLanPort(0);
-      setOpenLanWindow(false);
-      setOpenLanButtonEnabled(false);
-      if (ke) {
-        await killEdge();
-      }
-    };
-    window.addEventListener("MinecraftExitCleanUp", fun);
-    return () => {
-      window.removeEventListener("MinecraftExitCleanUp", fun);
-    };
-  }, []);
-  useEffect(() => {
     mountedBit.current = true;
     return () => {
       mountedBit.current = false;
@@ -451,7 +369,6 @@ function Launching(props: {
 
   const start = (a: Account | null) => {
     void (async () => {
-      setProfileRelatedID(profileHash.current, "");
       // @ts-ignore
       window[LAST_LAUNCH_REPORT_KEY] = await startBoot(
         (st) => {
@@ -466,9 +383,6 @@ function Launching(props: {
         props.container,
         a,
         props.server,
-        (id) => {
-          setProfileRelatedID(profileHash.current, id);
-        },
         currentEM.current,
         dry,
         secure,
@@ -586,9 +500,7 @@ function Launching(props: {
         title={
           <Typography className={"smtxt"}>
             {status === LaunchingStatus.FINISHED
-              ? openLanButtonEnabled
-                ? tr("ReadyToLaunch.OpenGameToLan")
-                : tr("ReadyToLaunch.Kill")
+              ? tr("ReadyToLaunch.Kill")
               : tr("ReadyToLaunch.Start")}
           </Typography>
         }
@@ -597,10 +509,7 @@ function Launching(props: {
           <ShiftEle name={"Launch"}>
             <Fab
               color={"primary"}
-              disabled={
-                status !== LaunchingStatus.PENDING &&
-                status !== LaunchingStatus.FINISHED
-              }
+              disabled={status !== LaunchingStatus.PENDING}
               onClick={() => {
                 if (status === LaunchingStatus.PENDING) {
                   if (reConfigureAccount) {
@@ -608,7 +517,6 @@ function Launching(props: {
                       ACCOUNT_CONFIGURED_KEY + profileHash.current
                     );
                   }
-                  setProfileRelatedID(profileHash.current, "");
                   // If account already configured then just continue
                   if (
                     localStorage.getItem(
@@ -665,30 +573,10 @@ function Launching(props: {
                   } else {
                     setSelecting(true);
                   }
-                } else if (status === LaunchingStatus.FINISHED) {
-                  if (openLanButtonEnabled) {
-                    setOpenLanWindow(true);
-                    return;
-                  }
-                  const i = getProfileRelatedID(profileHash.current);
-                  if (i) {
-                    console.log(`Forcefully stopping instance ${i}!`);
-                    stopMinecraft(i);
-                  }
                 }
               }}
             >
-              {status !== LaunchingStatus.FINISHED ? (
-                dry ? (
-                  <FlashOn />
-                ) : (
-                  <FlightTakeoff />
-                )
-              ) : openLanButtonEnabled ? (
-                <RssFeed />
-              ) : (
-                <FlightLand />
-              )}
+              {dry ? <FlashOn /> : <FlightTakeoff />}
             </Fab>
           </ShiftEle>
         </>
@@ -774,14 +662,6 @@ function Launching(props: {
       <br />
       <SpecialKnowledge />
       <SystemUsage />
-      <OpenWorldDialog
-        open={openLanWindow}
-        baseVersion={props.profile.baseVersion}
-        port={lanPort}
-        onClose={() => {
-          setOpenLanWindow(false);
-        }}
-      />
     </Container>
   );
 }
@@ -801,7 +681,6 @@ async function startBoot(
   container: MinecraftContainer,
   account: Account | null,
   server?: string,
-  setRunID: (id: string) => unknown = () => {},
   gem?: EventEmitter,
   dry = false,
   secure = false,
@@ -867,35 +746,13 @@ async function startBoot(
   let useAj = false;
   let ajHost = "";
   let prefetch = "";
-  let useNd = false;
-  let ndServerId = "";
   if (account !== null) {
-    // Setup skin if configured
-    if (
-      account.type === AccountType.ALICORN &&
-      getBoolean("features.local-skin")
-    ) {
-      try {
-        const skin = await skinTypeFor(account);
-        await initLocalYggdrasilServer(account, skin);
-        useAj = true;
-        ajHost = ROOT_YG_URL; // Use local yggdrasil
-        console.log("Successfully set skin!");
-      } catch (e) {
-        console.log("Skin setup failed!");
-        console.log(e);
-      }
-    }
     if (account.type === AccountType.AUTHLIB_INJECTOR) {
       useAj = true;
       ajHost = (account as AuthlibAccount).authServer;
       console.log("Auth server is " + ajHost);
       console.log("Prefetching data!");
       prefetch = await prefetchData((account as AuthlibAccount).authServer);
-    } else if (account.type === AccountType.NIDE8) {
-      useNd = true;
-      ndServerId = (account as Nide8Account).serverId;
-      console.log("Nide server id is " + ndServerId);
     }
   }
   let useServer = false;
@@ -963,12 +820,6 @@ async function startBoot(
   }
   const isolated = await isProfileIsolated(container, profile.id);
 
-  setStatus(LaunchingStatus.MODS_PREPARING);
-  if (!isolated) {
-    if (profile.type === ReleaseType.MODIFIED) {
-      await prepareModsCheckFor(profile, container, GLOBAL_LAUNCH_TRACKER);
-    }
-  }
   setStatus(LaunchingStatus.ARGS_GENERATING);
   let jHome = getJavaAndCheckAvailable(profileHash, true);
   if (jHome === DEF) {
@@ -992,7 +843,7 @@ async function startBoot(
   em.on(PROCESS_LOG_GATE, (d: string) => {
     const ds = d.split("\n");
     ds.forEach((d) => {
-      if (d.includes("---- Minecraft Crash Report ----")) {
+      if (d.includes("Minecraft Crash Report")) {
         d = d.trim();
       } else {
         d = d.trimEnd();
@@ -1062,25 +913,20 @@ async function startBoot(
       console.log(`Remove ${container.id}/${profile.id} from safe mode.`);
       // @ts-ignore
       window[LAST_LOGS_KEY] = [];
-      if (gc) {
-        gc();
-      }
     }
     console.log("Done!");
   });
-  let runID = "0";
+  let runID = 0;
   if (!dry) {
-    runID = launchProfile(profile, container, jRunnable, acData, em, {
+    runID = await launchProfile(profile, container, jRunnable, acData, em, {
       useAj: useAj,
       ajHost: ajHost,
       ajPrefetch: prefetch,
       useServer: useServer,
       server: serverHost,
-      useNd: useNd,
-      ndServerId: ndServerId,
       resolution: resolutionPolicy ? new Pair(w, h) : undefined,
       javaVersion: jInfo ? jInfo.rootVersion : 0,
-      maxMem: getNumber("memory") || autoMemory(),
+      maxMem: getNumber("memory") || (await autoMemory()),
       gc1: getString("main-gc", "z"),
       gc2: getString("para-gc", "pure"),
       demo: account === null,
@@ -1088,7 +934,6 @@ async function startBoot(
     });
   }
   addStatistics("Launch");
-  setRunID(runID);
   localStorage.setItem(LAST_SUCCESSFUL_GAME_KEY, window.location.hash);
   setLastUsed(container.id, profile.id);
   setStatus(LaunchingStatus.FINISHED);
@@ -1660,230 +1505,10 @@ function isReboot(hash: string): boolean {
 
 const CODE_KEY = "Hoofoff.Code";
 
-function OpenWorldDialog(props: {
-  open: boolean;
-  baseVersion: string;
-  port: number;
-  onClose: () => unknown;
-}): JSX.Element {
-  const [message, setMessage] = useState("Hi there!");
-  const [expires, setExpires] = useState(1); // in hours
-  const [count, setCount] = useState(5);
-  const [premium, setPremium] = useState(true);
-  const [code, setCode] = useState<string>();
-  const [isRunning, setRunning] = useState(false);
-  const [err, setErr] = useState<string>();
-  const [shouldClose, setShouldClose] = useState(false);
-  useEffect(() => {
-    const fun = () => {
-      setCode(undefined);
-      setRunning(false);
-      setErr(undefined);
-    };
-    window.addEventListener("MinecraftExitCleanUp", fun);
-    return () => {
-      window.removeEventListener("MinecraftExitCleanUp", fun);
-    };
-  }, []);
-  return (
-    <Dialog
-      open={props.open}
-      onClose={() => {
-        props.onClose();
-      }}
-    >
-      <DialogTitle>{tr("ReadyToLaunch.GenerateLink")}</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          {tr("ReadyToLaunch.GenerateLinkDesc")}
-        </DialogContentText>
-        {code ? (
-          <>
-            <br />
-            <DialogContentText sx={{ color: "primary.main" }}>
-              {tr("ReadyToLaunch.HoofoffCode", `Code=${code}`)}
-            </DialogContentText>
-            <br />
-          </>
-        ) : (
-          ""
-        )}
-        <FormControl fullWidth variant={"outlined"}>
-          <InputLabel id={"ReadyToLaunch-Expires"}>
-            {tr("ReadyToLaunch.Expires")}
-          </InputLabel>
-          <Select
-            label={tr("ReadyToLaunch.Expires")}
-            variant={"outlined"}
-            labelId={"ReadyToLaunch-Expires"}
-            fullWidth
-            color={"primary"}
-            autoFocus
-            margin={"dense"}
-            value={expires}
-            onChange={(e) => {
-              setExpires(parseInt(String(e.target.value)));
-            }}
-          >
-            <MenuItem value={1}>{tr("ReadyToLaunch.10Min")}</MenuItem>
-            <MenuItem value={3}>{tr("ReadyToLaunch.30Min")}</MenuItem>
-            <MenuItem value={6}>{tr("ReadyToLaunch.1Hour")}</MenuItem>
-            <MenuItem value={18}>{tr("ReadyToLaunch.3Hour")}</MenuItem>
-          </Select>
-        </FormControl>
-        <br /> <br />
-        <FormControl fullWidth variant={"outlined"}>
-          <InputLabel id={"ReadyToLaunch-Count"}>
-            {tr("ReadyToLaunch.CanUse")}
-          </InputLabel>
-          <Select
-            fullWidth
-            label={tr("ReadyToLaunch.CanUse")}
-            variant={"outlined"}
-            labelId={"ReadyToLaunch-Count"}
-            color={"primary"}
-            margin={"dense"}
-            value={count}
-            onChange={(e) => {
-              setCount(parseInt(String(e.target.value)));
-            }}
-          >
-            <MenuItem value={1}>{tr("ReadyToLaunch.Once")}</MenuItem>
-            <MenuItem value={5}>{tr("ReadyToLaunch.FiveTimes")}</MenuItem>
-            <MenuItem value={20}>{tr("ReadyToLaunch.TwentyTimes")}</MenuItem>
-            <MenuItem value={2147483647}>
-              {tr("ReadyToLaunch.Unlimited")}
-            </MenuItem>
-          </Select>
-        </FormControl>
-        <br />
-        <Tooltip
-          title={
-            <Typography className={"smtxt"}>
-              {tr("ReadyToLaunch.RequirePremiumDesc")}
-            </Typography>
-          }
-        >
-          <FormControlLabel
-            control={
-              <Checkbox
-                color={"primary"}
-                checked={premium}
-                onChange={(e) => {
-                  setPremium(e.target.checked);
-                }}
-              />
-            }
-            label={tr("ReadyToLaunch.RequirePremium")}
-          />
-        </Tooltip>
-        <DialogContentText>{tr("ReadyToLaunch.Message")}</DialogContentText>
-        <TextField
-          autoFocus
-          margin={"dense"}
-          onChange={(e) => {
-            setMessage(e.target.value);
-          }}
-          type={"text"}
-          spellCheck={false}
-          color={"primary"}
-          disabled={isRunning}
-          fullWidth
-          variant={"outlined"}
-          value={message}
-        />
-        {err ? (
-          <DialogContentText style={{ color: "#ff8400" }}>
-            {tr("ReadyToLaunch.Errors." + err)}
-          </DialogContentText>
-        ) : (
-          ""
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button
-          disabled={isRunning}
-          onClick={async () => {
-            if (shouldClose) {
-              setShouldClose(false);
-              setErr(undefined);
-              props.onClose();
-              return;
-            }
-            setRunning(true);
-            const gPort = props.port;
-            const n = uniqueHash(await getMachineUniqueID());
-            const p = uniqueHash(Math.random().toString());
-            try {
-              await killEdge();
-              await runEdge(
-                n,
-                p,
-                "10.16.32.128",
-                getString("hoofoff.central", HOOFOFF_CENTRAL, true) +
-                  ":" +
-                  NETWORK_PORT
-              );
-
-              const c = await acquireCode(
-                {
-                  message: message,
-                  ip: "10.16.32.128",
-                  port: gPort,
-                  network: n,
-                  password: p,
-                  premium: premium,
-                  baseVersion: props.baseVersion,
-                  nextIP: 0, // This is not necessary
-                },
-                expires * 600000,
-                count,
-                getString("hoofoff.central", HOOFOFF_CENTRAL, true) +
-                  ":" +
-                  QUERY_PORT
-              );
-              if (c.length === 6) {
-                setCode(c);
-                copy(c, { format: "text/plain" });
-                sessionStorage.setItem(CODE_KEY + props.port, c);
-                submitSucc(tr("ReadyToLaunch.HoofoffCodeRaw", `Code=${c}`));
-                setErr("");
-                setShouldClose(true);
-                setRunning(false);
-              }
-            } catch {
-              setErr("AcquireFailed");
-              setRunning(false);
-            }
-          }}
-        >
-          {shouldClose
-            ? tr("ReadyToLaunch.GoBack")
-            : tr("ReadyToLaunch.GetLink")}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 function WaitingText(): JSX.Element {
   const [hint, setHint] = useState(randsl("ReadyToLaunch.WaitingText"));
   useEffect(() => {
     const timer = setInterval(() => {
-      if (getBoolean("features.echo")) {
-        const echos = getEchos();
-        if (Math.random() > 0.6) {
-          if (echos.length > 0) {
-            setHint(
-              tr(
-                "Echo.Format",
-                `Text=${echos[Math.floor(Math.random() * echos.length)]}`
-              )
-            );
-            return;
-          }
-        }
-      }
       setHint(randsl("ReadyToLaunch.WaitingText"));
     }, 5000);
     return () => {
@@ -1903,16 +1528,6 @@ function WaitingText(): JSX.Element {
     </Typography>
   );
 }
-
-function setProfileRelatedID(hash: string, rid: string): void {
-  sessionStorage.setItem("MinecraftID" + hash, rid);
-}
-
-function getProfileRelatedID(hash: string): string {
-  return sessionStorage.getItem("MinecraftID" + hash) || "";
-}
-
-const CODE_REGEX = /(?<=\?code=)[^&]+/i;
 
 function AskURLDialog(): JSX.Element {
   const [url, setUrl] = useState("");
@@ -1960,7 +1575,7 @@ function AskURLDialog(): JSX.Element {
         </DialogContent>
         <DialogActions>
           <Button
-            disabled={!CODE_REGEX.test(url)}
+            disabled={!url.includes("code")}
             onClick={() => {
               window.dispatchEvent(
                 new CustomEvent("UrlAsked", { detail: url })
@@ -1978,15 +1593,12 @@ function AskURLDialog(): JSX.Element {
 }
 
 function SystemUsage(): JSX.Element {
-  const [mem, setMem] = useState(os.freemem());
-  const [totalMem, setTotalMem] = useState(os.totalmem());
-  const [loadAverage, setLoadAverage] = useState(os.loadavg()[0]);
-  const cpus = os.cpus().length;
+  const [mem, setMem] = useState(0);
+  const [totalMem, setTotalMem] = useState(0);
   useEffect(() => {
-    const fun = () => {
-      setMem(os.freemem());
-      setTotalMem(os.totalmem());
-      setLoadAverage(os.loadavg()[0]);
+    const fun = async () => {
+      setMem(await getFreeMemory());
+      setTotalMem(await getTotalMemory());
     };
     const t = setInterval(fun, 1000);
     return () => {
@@ -2016,24 +1628,6 @@ function SystemUsage(): JSX.Element {
             `Total=${Math.round((totalMem * 100) / 1073741824) / 100}`,
             `InUse=${Math.round(((totalMem - mem) * 100) / 1073741824) / 100}`
           )}
-        </Typography>
-      </Box>
-      <Box
-        sx={{ display: "flex", flexDirection: "row", alignItems: "baseline" }}
-      >
-        <Box
-          sx={{
-            height: "0.2rem",
-            width: `${(loadAverage / cpus) * 100}%`,
-            backgroundColor: "secondary.main",
-          }}
-        />
-        <Typography
-          color={"secondary"}
-          sx={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
-        >
-          &nbsp;
-          {tr("ReadyToLaunch.CPU", `Total=${cpus}`, `Load=${loadAverage}`)}
         </Typography>
       </Box>
     </>

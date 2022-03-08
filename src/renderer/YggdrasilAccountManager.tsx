@@ -32,7 +32,6 @@ import {
 } from "../modules/auth/AccountUtil";
 import { AuthlibAccount } from "../modules/auth/AuthlibAccount";
 import { MojangAccount } from "../modules/auth/MojangAccount";
-import { Nide8Account } from "../modules/auth/Nide8Account";
 import { ALICORN_ENCRYPTED_DATA_SUFFIX } from "../modules/commons/Constants";
 import { getBoolean } from "../modules/config/ConfigSupport";
 import { YNDialog } from "./OperatingHint";
@@ -326,8 +325,6 @@ function SingleAccountDisplay(props: {
 
 export function toReadableType(t: AccountType): string {
   switch (t) {
-    case AccountType.NIDE8:
-      return "Nide8";
     case AccountType.ALICORN:
       return "Alicorn";
     case AccountType.AUTHLIB_INJECTOR:
@@ -435,7 +432,6 @@ function AddAccount(props: {
   const [isCustom, setIsCustom] = useState(
     props.server !== undefined && props.server.length > 0
   );
-  const [isNide, setNide] = useState(false);
   const classes = useInputStyles();
   useEffect(() => {
     const fun = (e: Event) => {
@@ -480,25 +476,12 @@ function AddAccount(props: {
               onChange={(e) => {
                 setIsCustom(e.target.checked);
                 if (!e.target.checked) {
-                  setNide(false);
                   setAuthHost("");
                 }
               }}
             />
           }
           label={tr("AccountManager.UseCustomHost")}
-        />
-        <FormControlLabel
-          control={
-            <Switch
-              disabled={!isCustom}
-              checked={isCustom && isNide}
-              onChange={(e) => {
-                setNide(e.target.checked);
-              }}
-            />
-          }
-          label={tr("AccountManager.UseNide8")}
         />
         <TextField
           disabled={!isCustom}
@@ -534,16 +517,12 @@ function AddAccount(props: {
           }
           onClick={() => {
             if (isCustom) {
-              if (isNide) {
-                props.handleNewAccount(new Nide8Account(email, authHost));
-              } else {
-                props.handleNewAccount(
-                  new AuthlibAccount(
-                    email,
-                    authHost.endsWith("/") ? authHost.slice(0, -1) : authHost
-                  )
-                );
-              }
+              props.handleNewAccount(
+                new AuthlibAccount(
+                  email,
+                  authHost.endsWith("/") ? authHost.slice(0, -1) : authHost
+                )
+              );
             } else {
               props.handleNewAccount(new MojangAccount(email));
             }

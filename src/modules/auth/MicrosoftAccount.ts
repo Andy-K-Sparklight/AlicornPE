@@ -1,7 +1,5 @@
-import { ipcRenderer } from "electron";
-import { tr } from "../../renderer/Translator";
+import { netGet, netPost, openExternal } from "../../impl/ClicornAPI";
 import { isNull, safeGet } from "../commons/Null";
-import { getString } from "../config/ConfigSupport";
 import { decrypt2, encrypt2 } from "../security/Encrypt";
 import { Account } from "./Account";
 import { AccountType } from "./AccountUtil";
@@ -186,41 +184,32 @@ async function browserGetCode(quiet = false): Promise<string> {
   const LOGIN_WINDOW_KEY =
     window.localStorage.getItem("MS.LoginWindowKey") ||
     "alicorn_ms_login_initial";
-  console.log("Building login window...");
-  const r = await ipcRenderer.invoke(
-    "msBrowserCode",
-    getString("web.global-proxy"),
-    quiet,
-    LOGIN_WINDOW_KEY,
-    [
-      tr("ReadyToLaunch.IsLoginOK"),
-      tr("ReadyToLaunch.LoginInstruction"),
-      tr("ReadyToLaunch.ContinueLogin"),
-      tr("ReadyToLaunch.HelpMeLogin"),
-    ]
+  console.log("External opening login window...");
+  await openExternal(
+    "https://login.live.com/oauth20_authorize.srf?client_id=00000000402b5328&response_type=code&scope=service%3A%3Auser.auth.xboxlive.com%3A%3AMBI_SSL&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf"
   );
-  if (r === "USER PROVIDE") {
-    window.dispatchEvent(new CustomEvent("OpenAskUrlDialog"));
-    const s = await new Promise<string>((res) => {
-      const onCancel = () => {
-        res("");
-        window.removeEventListener("UrlAsked", onGot);
-        window.removeEventListener("UrlAskCancelled", onCancel);
-      };
-      const onGot = (e: Event) => {
-        res((e as CustomEvent).detail);
-        window.removeEventListener("UrlAsked", onGot);
-        window.removeEventListener("UrlAskCancelled", onCancel);
-      };
-      window.addEventListener("UrlAsked", onGot);
-      window.addEventListener("UrlAskCancelled", onCancel);
-    });
-    return decodeURIComponent((s.match(CODE_REGEX) || [])[0] || "");
-  } else {
-    return r;
+  window.dispatchEvent(new CustomEvent("OpenAskUrlDialog"));
+  const s = await new Promise<string>((res) => {
+    const onCancel = () => {
+      res("");
+      window.removeEventListener("UrlAsked", onGot);
+      window.removeEventListener("UrlAskCancelled", onCancel);
+    };
+    const onGot = (e: Event) => {
+      res((e as CustomEvent).detail);
+      window.removeEventListener("UrlAsked", onGot);
+      window.removeEventListener("UrlAskCancelled", onCancel);
+    };
+    window.addEventListener("UrlAsked", onGot);
+    window.addEventListener("UrlAskCancelled", onCancel);
+  });
+  const c = s.split("code=")[1];
+  if (!c) {
+    return "";
   }
+  const r = c.split("&")[0];
+  return decodeURIComponent(r || "");
 }
-const CODE_REGEX = /(?<=\?code=)[^&]+/gi;
 
 interface AcquireTokenCallback {
   success: boolean;
@@ -247,17 +236,20 @@ async function tokenRequest(
   const grantType = isRefresh ? "refresh_token" : "authorization_code";
   const grantTag = isRefresh ? "refresh_token" : "code";
   try {
-    const ret = await (
-      await fetch(MS_TOKEN_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        cache: "no-cache",
-        body: `client_id=00000000402b5328&${grantTag}=${credit}&grant_type=${grantType}&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&scope=service%3A%3Auser.auth.xboxlive.com%3A%3AMBI_SSL`,
-        credentials: "include",
-      })
-    ).json();
+    const res = await netPost(
+      MS_TOKEN_URL,
+      JSON.stringify({
+        "Content-Type": "application/x-www-form-urlencoded",
+      }),
+      `client_id=00000000402b5328&${grantTag}=${credit}&grant_type=${grantType}&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf&scope=service%3A%3Auser.auth.xboxlive.com%3A%3AMBI_SSL`,
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return {
+        success: false,
+      };
+    }
+    const ret = JSON.parse(res.body.toString());
     if (!isNull(safeGet(ret, ["error"]))) {
       return {
         success: false,
@@ -300,26 +292,27 @@ async function getXBLToken(
   msToken: string
 ): Promise<AcquireXBLXSTSTokenCallback> {
   try {
-    const response = await (
-      await fetch(XBL_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+    const res = await netPost(
+      XBL_URL,
+      JSON.stringify({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      }),
+      JSON.stringify({
+        Properties: {
+          AuthMethod: "RPS",
+          SiteName: "user.auth.xboxlive.com",
+          RpsTicket: msToken,
         },
-        credentials: "include",
-        cache: "no-cache",
-        body: JSON.stringify({
-          Properties: {
-            AuthMethod: "RPS",
-            SiteName: "user.auth.xboxlive.com",
-            RpsTicket: msToken,
-          },
-          RelyingParty: "http://auth.xboxlive.com",
-          TokenType: "JWT",
-        }),
-      })
-    ).json();
+        RelyingParty: "http://auth.xboxlive.com",
+        TokenType: "JWT",
+      }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return { success: false };
+    }
+    const response = JSON.parse(res.body.toString());
     const token = safeGet(response, ["Token"]);
     const uhs = safeGet(response, ["DisplayClaims", "xui", 0, "uhs"]);
     if (isNull(token) || isNull(uhs)) {
@@ -340,25 +333,26 @@ async function getXSTSToken(
   xblToken: string
 ): Promise<AcquireXBLXSTSTokenCallback> {
   try {
-    const response = await (
-      await fetch(XSTS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+    const res = await netPost(
+      XSTS_URL,
+      JSON.stringify({
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      }),
+      JSON.stringify({
+        Properties: {
+          SandboxId: "RETAIL",
+          UserTokens: [xblToken],
         },
-        credentials: "include",
-        cache: "no-cache",
-        body: JSON.stringify({
-          Properties: {
-            SandboxId: "RETAIL",
-            UserTokens: [xblToken],
-          },
-          RelyingParty: "rp://api.minecraftservices.com/",
-          TokenType: "JWT",
-        }),
-      })
-    ).json();
+        RelyingParty: "rp://api.minecraftservices.com/",
+        TokenType: "JWT",
+      }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return { success: false };
+    }
+    const response = JSON.parse(res.body.toString());
     const token = safeGet(response, ["Token"]);
     if (isNull(token)) {
       return { success: false };
@@ -379,19 +373,20 @@ async function getMojangTokenAndXuid(
   xstsToken: string
 ): Promise<[string, string]> {
   try {
-    const response = await (
-      await fetch(MJ_LOGIN_XBOX, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        cache: "no-cache",
-        body: JSON.stringify({
-          identityToken: `XBL3.0 x=${uhs};${xstsToken}`,
-        }),
-      })
-    ).json();
+    const res = await netPost(
+      MJ_LOGIN_XBOX,
+      JSON.stringify({
+        "Content-Type": "application/json",
+      }),
+      JSON.stringify({
+        identityToken: `XBL3.0 x=${uhs};${xstsToken}`,
+      }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return ["", ""];
+    }
+    const response = JSON.parse(res.body.toString());
     return [
       String(safeGet(response, ["access_token"], "")),
       // String(safeGet(response, ["username"], "")), TODO: find out how to get xuid
@@ -414,17 +409,18 @@ async function getUUIDAndUserName(
   acToken: string
 ): Promise<MinecraftUserProfileCallback> {
   try {
-    const response = await (
-      await fetch(MJ_PROFILE_API, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${acToken}`,
-        },
-        credentials: "include",
-        cache: "no-cache",
-      })
-    ).json();
+    const res = await netGet(
+      MJ_PROFILE_API,
+      JSON.stringify({
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${acToken}`,
+      }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return { success: false };
+    }
+    const response = JSON.parse(res.body.toString());
     const uuid = safeGet(response, ["id"]);
     const name = safeGet(response, ["name"]);
     if (isNull(uuid) || isNull(name)) {

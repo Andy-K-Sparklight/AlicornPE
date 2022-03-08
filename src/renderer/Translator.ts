@@ -1,23 +1,22 @@
-import { ipcRenderer } from "electron";
-import { readFile } from "fs-extra";
-import os from "os";
 import React from "react";
+import {
+  closeFile,
+  getOsType,
+  getUserHome,
+  openFile,
+  readFile,
+} from "../impl/ClicornAPI";
+import { pathBasename } from "../impl/Path";
 import { getString, set } from "../modules/config/ConfigSupport";
 import { getPathInDefaults } from "../modules/config/DataSupport";
 
-export const ALL_ASSISTANTS = ["PonyCN", "Equish", "PonyTW", "Maud", "66CCFF"];
+export const ALL_ASSISTANTS = ["PonyCN"];
 
 function currentLocale(): string {
   let pr = getString("assistant");
   if (pr.length === 0) {
-    const l = ipcRenderer.sendSync("getLocale");
-    if (l.startsWith("zh")) {
-      set("assistant", "PonyCN");
-      pr = "PonyCN";
-    } else {
-      set("assistant", "Equish");
-      pr = "Equish";
-    }
+    set("assistant", "PonyCN");
+    pr = "PonyCN";
   }
   return pr;
 }
@@ -109,7 +108,9 @@ async function buildLocale(
   name: string
 ): Promise<Record<string, string | string[]>> {
   try {
-    let f = (await readFile(getPathInDefaults(name + ".lang"))).toString();
+    const fd = await openFile(getPathInDefaults(name + ".lang"), "r");
+    let f = (await readFile(fd)).toString();
+    await closeFile(fd);
     f = f.replaceAll("\\\n", "");
     const a = f.split("\n");
     const b: string[] = [];
@@ -168,14 +169,18 @@ function applyEnvironmentVars(strIn: string): string {
   }
   let primary = strIn
     .replaceAll("{Date}", new Date().toLocaleDateString())
-    .replaceAll("{UserName}", getString("user.name") || os.userInfo().username)
-    .replaceAll("{Platform}", os.platform())
+    .replaceAll(
+      "{UserName}",
+      getString("user.name") || pathBasename(getUserHome())
+    )
+    .replaceAll("{Platform}", getOsType())
     .replaceAll("{}", "");
 
-  const extractRegex = /(?<={Config:).*?(?=})/g;
+  const extractRegex = /\{Config:.*?(?=})/g;
   const allConfig = primary.match(extractRegex);
   if (allConfig) {
     allConfig.forEach((cKey) => {
+      cKey = cKey.slice(8);
       primary = primary.replaceAll(`{Config:${cKey}}`, getString(cKey));
     });
   }
@@ -201,7 +206,7 @@ function applyCustomVars(origin: string, rules: string[]): string {
 // Randsl control
 // Replace first
 // [JavaScript Code] means only add this to choices if JS result is true
-const CONTROL_CODE_REGEX = /(?<=\[).*?(?=].*)/g;
+const CONTROL_CODE_REGEX = /\[.*?(?=].*)/g;
 
 function trimControlCode(origin: string[], rules: string[]): string[] {
   const output: string[] = [];
@@ -210,7 +215,7 @@ function trimControlCode(origin: string[], rules: string[]): string[] {
     const controlCode = tr.match(CONTROL_CODE_REGEX);
     if (controlCode && controlCode[0]) {
       try {
-        const r = eval(controlCode[0]);
+        const r = eval(controlCode[0].slice(1));
         if (r) {
           const a = tr.split("]");
           a.shift();
@@ -243,26 +248,4 @@ function trimControlCode(origin: string[], rules: string[]): string[] {
     }
   });
   return output;
-}
-
-interface Tip {
-  name: Record<string, string>;
-  text: Record<string, string>;
-  img: string;
-  rel?: string;
-}
-
-let TIPS: Tip[] = [];
-
-export async function loadTips(): Promise<void> {
-  try {
-    const f = JSON.parse(
-      (await readFile(getPathInDefaults("tips.json"))).toString()
-    );
-    TIPS = f;
-  } catch {}
-}
-
-export function getTip(): Tip {
-  return TIPS[Math.floor(Math.random() * TIPS.length)];
 }

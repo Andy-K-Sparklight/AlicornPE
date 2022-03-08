@@ -1,24 +1,30 @@
-import { ipcRenderer } from "electron";
-import fs from "fs-extra";
-import os from "os";
-import path from "path";
-import { DEFAULTS_ROOT } from "./DataSupport";
+import {
+  closeFile,
+  ensureDir,
+  getUserHome,
+  openFile,
+  readFile,
+  writeFile,
+} from "../../impl/ClicornAPI";
+import { pathJoin } from "../../impl/Path";
 import { getBasePath } from "./PathSolve";
 
-const CONFIG_FILE = path.resolve(
-  os.homedir(),
-  "alicorn",
-  "alicorn.config.json"
-);
+let CONFIG_FILE: string;
 
-const DEFAULT_CONFIG_FILE = path.resolve(
-  getBasePath(),
-  "defaults",
-  "alicorn.config.json"
-);
+let DEFAULT_CONFIG_FILE: string;
 
 let cachedConfig = {};
 let defaultConfig = {};
+
+export function initConfigPaths(): void {
+  CONFIG_FILE = pathJoin(getUserHome(), "alicorn", "alicorn.config.json");
+  DEFAULT_CONFIG_FILE = pathJoin(
+    getBasePath(),
+    "defaults",
+    "alicorn.config.json"
+  );
+}
+
 export function set(key: string, value: unknown): void {
   // @ts-ignore
   cachedConfig[key] = value;
@@ -64,66 +70,46 @@ export function getNumber(key: string, def = 0): number {
   return parseNum(get(key, def), def);
 }
 
+export function ensureDataDir(): Promise<void> {
+  return ensureDir(pathJoin(getUserHome(), "alicorn"));
+}
 export async function loadConfig(): Promise<void> {
   try {
-    cachedConfig = JSON.parse((await fs.readFile(CONFIG_FILE)).toString());
+    const fd = await openFile(CONFIG_FILE, "r");
+    const data = await readFile(fd);
+    await closeFile(fd);
+    cachedConfig = JSON.parse(data.toString());
   } catch {
     try {
-      cachedConfig = JSON.parse(
-        (await fs.readFile(DEFAULT_CONFIG_FILE)).toString()
-      );
+      const fd = await openFile(DEFAULT_CONFIG_FILE, "r");
+      const data = await readFile(fd);
+      await closeFile(fd);
+      cachedConfig = JSON.parse(data.toString());
     } catch (e) {
       console.log(e);
       return;
     }
   }
   try {
-    defaultConfig = Object.freeze(
-      JSON.parse(
-        (
-          await fs.readFile(path.join(DEFAULTS_ROOT, "alicorn.config.json"))
-        ).toString()
-      )
+    const fd = await openFile(
+      pathJoin(getBasePath(), "defaults", "alicorn.config.json"),
+      "r"
     );
+    const data = await readFile(fd);
+    await closeFile(fd);
+    defaultConfig = Object.freeze(JSON.parse(data.toString()));
   } catch (e) {
     console.log(e);
     return;
   }
   fixConfig(cachedConfig, defaultConfig);
 }
-export function loadConfigSync(): void {
-  try {
-    cachedConfig = JSON.parse(fs.readFileSync(CONFIG_FILE).toString());
-  } catch {
-    cachedConfig = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_FILE).toString());
-  }
-  try {
-    defaultConfig = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_FILE).toString());
-  } catch {}
-  fixConfig(cachedConfig, defaultConfig);
-}
 
 export async function saveConfig(): Promise<void> {
   const dat = JSON.stringify(cachedConfig, null, 4);
-  await fs.outputFile(CONFIG_FILE, dat, {
-    mode: 0o777,
-  });
-}
-
-// DANGEROUS - Will overwrite
-export async function saveDefaultConfig(): Promise<void> {
-  await fs.ensureDir(path.dirname(CONFIG_FILE));
-  const stream = fs
-    .createReadStream(DEFAULT_CONFIG_FILE)
-    .pipe(fs.createWriteStream(CONFIG_FILE, { mode: 0o777 }));
-  return new Promise<void>((resolve, reject) => {
-    stream.on("finish", () => {
-      resolve();
-    });
-    stream.on("error", (e) => {
-      reject(e);
-    });
-  });
+  const fd = await openFile(CONFIG_FILE, "w");
+  await writeFile(fd, Buffer.from(dat));
+  await closeFile(fd);
 }
 
 export function parseNum(val: unknown, def = 0): number {
@@ -143,7 +129,7 @@ export function parseNum(val: unknown, def = 0): number {
   return def;
 }
 
+// The main program does not read any config, instead, optn should be send to main by renderer
 export async function saveAndReloadMain(): Promise<void> {
   await saveConfig();
-  ipcRenderer.send("reloadConfig");
 }

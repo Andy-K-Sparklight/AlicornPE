@@ -1,21 +1,12 @@
 import { Box, Typography } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { ipcRenderer } from "electron";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import pkg from "../../package.json";
 import { AlicornTheme } from "./Stylex";
 import { tr } from "./Translator";
 const modeList = ["Copyright", "Privacy", "Credit"];
 export function VersionView(): JSX.Element {
-  const [ecVersion, setEcVersion] = useState(
-    tr("VersionView.Electron.Fetching")
-  );
   const [displayMode, setDisplayMode] = useState(0);
-  useEffect(() => {
-    void (async () => {
-      setEcVersion(await ipcRenderer.invoke("getElectronVersion"));
-    })();
-  }, []);
   const classes = makeStyles((theme: AlicornTheme) => ({
     root: {},
     title: {
@@ -45,19 +36,6 @@ export function VersionView(): JSX.Element {
           `List=${buildDepList()
             .map((x) => x.join(" "))
             .join(", ")}`
-        )}
-      </Typography>
-      <Typography className={classes.text} color={"secondary"}>
-        {tr(
-          "VersionView.EcVersion",
-          `Build=${pkg.devDependencies.electron.slice(1)}`,
-          `Current=${ecVersion}`
-        )}
-      </Typography>
-      <Typography className={classes.text} color={"secondary"} gutterBottom>
-        {tr(
-          "VersionView.Electron." +
-            cmpVersion(ecVersion, pkg.devDependencies.electron.slice(1))
         )}
       </Typography>
       <br />
@@ -95,23 +73,10 @@ export function VersionView(): JSX.Element {
     </Box>
   );
 }
-function cmpVersion(
-  current: string,
-  build: string
-): "Perfect" | "OK" | "Attention" {
-  if (current === build) {
-    return "Perfect";
-  }
-  if (current.split(".")[0] === build.split(".")[0]) {
-    return "OK";
-  }
-  return "Attention";
-}
 
 function buildDepList(): [string, string][] {
   const o: [string, string][] = [];
   o.push(["React", pkg.dependencies.react.slice(1)]);
   o.push(["Material UI", pkg.dependencies["@mui/material"].slice(1)]);
-  o.push(["Undici", pkg.dependencies.undici.slice(1)]);
   return o;
 }

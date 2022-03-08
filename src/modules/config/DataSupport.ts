@@ -1,26 +1,41 @@
-import fs from "fs-extra";
-import os from "os";
-import path from "path";
-import { copyFileStream, isFileExist } from "../commons/FileUtil";
+import {
+  closeFile,
+  getUserHome,
+  isFileExist,
+  openFile,
+  readFile,
+  writeFile,
+} from "../../impl/ClicornAPI";
+import { pathJoin } from "../../impl/Path";
+import { copyFileRW } from "../commons/FileUtil";
 import { getBasePath } from "./PathSolve";
 
-const DATA_ROOT = path.resolve(os.homedir(), "alicorn");
-export const DEFAULTS_ROOT = path.resolve(getBasePath(), "defaults");
+let DATA_ROOT: string;
+let DEFAULTS_ROOT: string;
+
+export function initDataPaths(): void {
+  DATA_ROOT = pathJoin(getUserHome(), "alicorn");
+  DEFAULTS_ROOT = pathJoin(getBasePath(), "defaults");
+}
 
 export async function loadData(dataPath: string): Promise<string> {
   try {
-    return (await fs.readFile(getActualDataPath(dataPath))).toString();
-  } catch {
+    const fd = await openFile(getActualDataPath(dataPath), "rb");
+    const dt = await readFile(fd);
+    await closeFile(fd);
+    return dt.toString();
+  } catch (e) {
+    console.log(e);
     return "";
   }
 }
 
 export function getPathInDefaults(pt: string): string {
-  return path.resolve(DEFAULTS_ROOT, pt);
+  return pathJoin(DEFAULTS_ROOT, pt);
 }
 
 export function getActualDataPath(pt: string): string {
-  return path.resolve(DATA_ROOT, pt);
+  return pathJoin(DATA_ROOT, pt);
 }
 
 export async function saveData(
@@ -29,8 +44,12 @@ export async function saveData(
 ): Promise<void> {
   try {
     const dest = getActualDataPath(relativePath);
-    await fs.outputFile(dest, data, { mode: 0o777 });
-  } catch {}
+    const fd = await openFile(dest, "wb");
+    await writeFile(fd, Buffer.from(data));
+    await closeFile(fd);
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 // Hint: DO NOT use 'fs.copyFile' here!
@@ -42,7 +61,7 @@ export async function saveDefaultData(dfPath: string): Promise<void> {
     if (await isFileExist(dest)) {
       return;
     }
-    await copyFileStream(path.join(DEFAULTS_ROOT, dfPath), dest);
+    await copyFileRW(pathJoin(DEFAULTS_ROOT, dfPath), dest);
   } catch {}
 }
 
@@ -55,7 +74,7 @@ export async function saveDefaultDataAs(
     if (await isFileExist(dest)) {
       return;
     }
-    await copyFileStream(path.join(DEFAULTS_ROOT, dfPath), dest);
+    await copyFileRW(pathJoin(DEFAULTS_ROOT, dfPath), dest);
   } catch (e) {
     console.log(e);
   }

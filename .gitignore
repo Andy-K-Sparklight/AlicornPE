@@ -108,6 +108,7 @@ dist
 
 # Build output
 out
+pack.tar.xz
 
 # VSCode
 .vscode/settings.json

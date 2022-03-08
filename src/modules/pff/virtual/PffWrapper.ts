@@ -1,5 +1,6 @@
-import { copyFile, remove } from "fs-extra";
-import { getBoolean, getString } from "../../config/ConfigSupport";
+import { remove } from "../../../impl/ClicornAPI";
+import { copyFileRW } from "../../commons/FileUtil";
+import { getString } from "../../config/ConfigSupport";
 import { MinecraftContainer } from "../../container/MinecraftContainer";
 import { DownloadMeta } from "../../download/AbstractDownloader";
 import { wrappedDownloadFile } from "../../download/DownloadWrapper";
@@ -8,12 +9,11 @@ import { loadLockfile, saveLockfile } from "./Lockfile";
 import {
   AbstractModResolver,
   CurseforgeModResolver,
-  CursePlusPlusModResolver,
   ModResolver,
   ModrinthModResolver,
 } from "./Resolver";
 
-const SLUG_SCOPE_REGEX = /(?<=@)(curseforge|modrinth|curseplusplus)(?=:.+?)/i;
+const SLUG_SCOPE_REGEX = /@(curseforge|modrinth|curseplusplus)(?=:.+?)/i;
 
 export async function fetchModByName(
   slug: string,
@@ -28,7 +28,7 @@ export async function fetchModByName(
   let mainId;
   let artifactId;
   if (SLUG_SCOPE_REGEX.test(slug)) {
-    scope = (slug.match(SLUG_SCOPE_REGEX) || [])[0];
+    scope = (slug.match(SLUG_SCOPE_REGEX) || ["@"])[0].slice(1);
     sid = slug.split(":")[1] || "";
     const p = sid.split("/");
     if (p.length === 2) {
@@ -95,7 +95,7 @@ export async function fetchModByName(
   return false;
 }
 
-export async function fetchSelectedMod(
+async function fetchSelectedMod(
   rsv: ModResolver,
   gameVersion: string,
   modLoader: "Fabric" | "Forge",
@@ -116,7 +116,7 @@ export async function fetchSelectedMod(
       try {
         const pc = await getCachedMod(rsv.mainId, a.id);
         if (pc) {
-          await copyFile(pc, container.getModJar(a.fileName));
+          await copyFileRW(pc, container.getModJar(a.fileName));
           await rsv.writeLock(lf);
           await saveLockfile(lf, container);
           return true;
@@ -192,23 +192,12 @@ export function getResolvers(
     scope = scope.toLowerCase();
   }
   if (scope === "curseforge") {
-    if (getBoolean("pff.cursepp2")) {
-      return [new CursePlusPlusModResolver(slug)];
-    } else {
-      return [new CurseforgeModResolver(slug)];
-    }
-  }
-  if (scope === "curseplusplus") {
-    return [new CursePlusPlusModResolver(slug)];
+    return [new CurseforgeModResolver(slug)];
   }
   if (scope === "modrinth") {
     return [new ModrinthModResolver(slug)];
   }
-  if (getBoolean("pff.cursepp2")) {
-    return [new ModrinthModResolver(slug), new CursePlusPlusModResolver(slug)];
-  } else {
-    return [new ModrinthModResolver(slug), new CurseforgeModResolver(slug)];
-  }
+  return [new ModrinthModResolver(slug), new CurseforgeModResolver(slug)];
 }
 
 const PFF_FLAG = "Downloader.IsPff";

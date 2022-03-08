@@ -1,3 +1,4 @@
+import { netGet } from "../../impl/ClicornAPI";
 import { safeGet } from "../commons/Null";
 import {
   Account,
@@ -72,17 +73,17 @@ export class MojangAccount extends Account {
 export async function getMojangSkinByUUID(a: Account): Promise<string> {
   try {
     const o = `https://sessionserver.mojang.com/session/minecraft/profile/${a.lastUsedUUID}`;
-
-    const response = await (
-      await fetch(o, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        cache: "no-cache",
-      })
-    ).json();
+    const res = await netGet(
+      o,
+      JSON.stringify({
+        "Content-Type": "application/json",
+      }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return "";
+    }
+    const response = JSON.parse(res.body.toString());
     const props = safeGet(response, ["properties"]);
     if (!(props instanceof Array)) {
       return "";

@@ -1,7 +1,7 @@
+import { netGet } from "../../impl/ClicornAPI";
 import { expose } from "../boticorn/FTable";
 import { getNumber } from "../config/ConfigSupport";
 import { applyMirror } from "./Mirror";
-import { getTimeoutController } from "./RainbowFetch";
 
 expose({ xgot, pgot });
 
@@ -12,40 +12,30 @@ export async function xgot(
 ): Promise<unknown> {
   if (noMirror) {
     try {
-      const [ac, sti] = getTimeoutController(
-        noTimeout ? -1 : getNumber("download.concurrent.timeout", 5000)
+      const res = await netGet(
+        url,
+        "{}",
+        noTimeout ? 0 : getNumber("download.concurrent.timeout", 5000)
       );
-      const res = await fetch(url, {
-        method: "GET",
-        signal: ac.signal,
-        keepalive: true,
-        credentials: "omit",
-      });
-      sti();
-      if (!res.ok) {
+      if (res.status < 200 || res.status >= 300) {
         throw "Failed to fetch! Code: " + res.status;
       }
-      return await res.json();
+      return await JSON.parse(res.body.toString());
     } catch (e) {
       console.log(e);
       return {};
     }
   }
   try {
-    const [ac, sti] = getTimeoutController(
-      noTimeout ? -1 : getNumber("download.concurrent.timeout", 5000)
+    const res = await netGet(
+      applyMirror(url),
+      "{}",
+      noTimeout ? 0 : getNumber("download.concurrent.timeout", 5000)
     );
-    const res = await fetch(applyMirror(url), {
-      method: "GET",
-      signal: ac.signal,
-      credentials: "omit",
-      keepalive: true,
-    });
-    sti();
-    if (!res.ok) {
+    if (res.status < 200 || res.status >= 300) {
       throw "Failed to fetch! Code: " + res.status;
     }
-    return await res.json();
+    return JSON.parse(res.body.toString());
   } catch (e) {
     console.log(e);
     console.log("Relative url(origin): " + url);
@@ -55,16 +45,9 @@ export async function xgot(
 }
 
 export async function pgot(url: string, timeout: number): Promise<unknown> {
-  const [ac, sti] = getTimeoutController(timeout);
-  const res = await fetch(url, {
-    method: "GET",
-    credentials: "omit",
-    signal: ac.signal,
-    keepalive: true,
-  });
-  sti();
-  if (!res.ok) {
+  const res = await netGet(url, "{}", timeout);
+  if (res.status < 200 || res.status >= 300) {
     throw "Failed to fetch! Code: " + res.status;
   }
-  return await res.json();
+  return JSON.parse(res.body.toString());
 }

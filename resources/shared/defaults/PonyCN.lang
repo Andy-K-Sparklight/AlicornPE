@@ -794,7 +794,7 @@ Alicorn 每周都有新版本！
 
 # VersionView.Name
 
-Alicorn Launcher: {AppVersion} #{UpdatorVersion}
+Alicorn Launcher PE: {AppVersion} #{UpdatorVersion}
 
 # VersionView.Modules
 
@@ -838,7 +838,7 @@ Alicorn Launcher: {AppVersion} #{UpdatorVersion}
 
 # VersionView.Credit
 
-@HTMLAlicorn 的创建离不开超过 500 个 NPM 可重用软件包，其中包括 Material UI、React、Electron 这些框架软件包，undici、crypto-js、ajv 这些效用软件包，Webpack、TypeScript 这些构建用软件包，以及许多许多被大量依赖的基础软件包。\nAlicorn 还要感谢包括 VSCodium 和 Vim 在内的开发工具，因为有它们，Alicorn 的开发效率成倍地提升。\n\n你是否想支持 Alicorn？或者只是想了解更多内容？欢迎访问 <a href="javascript:ashow('https://alc.pages.dev')">Alicorn Launcher 官方网站</a>
+@HTMLAlicorn PE 的创建离不开 POSIX、ISO C14 在内的一系列标准，Webview、Zlib、Curl 等的强力驱动和各位 Alicorn PE 开发者的努力制作。同时我们还要感谢宇宙最强编译器 GCC 和史诗级编辑器 Vim，是它们让 Alicorn PE 出现在这里。\n\n你是否想支持 Alicorn？或者只是想了解更多内容？欢迎访问 <a href="javascript:ashow('https://alc.pages.dev')">Alicorn Launcher 官方网站</a>
 
 # VersionView.FreeSoftwareClaim
 
@@ -846,7 +846,7 @@ Alicorn Launcher: {AppVersion} #{UpdatorVersion}
 
 # VersionView.SuperCowPower
 
-本 Alicorn 具有超级牛力。
+本 Alicorn 没有超级牛力。
 
 # ContainerManager.Size
 
@@ -2532,7 +2532,7 @@ Mod 速览
 
 # PffFront.Hint
 
-这里只显示由 Pff 安装的 Mod，单击名称可以在文件资源管理器中查看它。右击更新/重新安装此 Mod。
+这里只显示由 Pff 安装的 Mod。右击更新/重新安装此 Mod。
 
 # PffFront.UpgradeAll
 
@@ -3324,11 +3324,11 @@ Minecraft 1.18 及更高版本需要 <Java 17> 才能运行，1.17 需要 <Java 
 
 # Instruction.JavaSelector.4
 
-……所以我才会在这里。可以使用下面的按钮 <安装合适的 Java>。Alicorn 将自动识别多个 Java，<不会冲突>。@@@JavaSelectorInstall
+Alicorn JE 有更好的解决方案，但很遗憾，我 (Alicorn PE) 没有，你可能需要自己安装……
 
 # Instruction.JavaSelector.5
 
-好啦，祝你好运！
+……祝你好运！
 
 # Instruction.JavaSelector.6
 

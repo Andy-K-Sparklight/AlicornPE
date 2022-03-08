@@ -5,24 +5,16 @@ import {
   AutoFixOff,
   Bolt,
   Book,
-  CalendarToday,
   CameraEnhance,
-  CancelPresentation,
   Chat,
-  Checkroom,
   CloudDone,
   CloudSync,
   Code,
   DataArray,
   DataSaverOff,
   DataSaverOn,
-  DeviceHub,
-  DisplaySettings,
-  Dns,
   Download,
-  Downloading,
   EmojiEmotions,
-  ExtensionOff,
   Favorite,
   FirstPage,
   Home,
@@ -30,37 +22,25 @@ import {
   InsertPhoto,
   Inventory2,
   Iso,
-  LockOpen,
-  LockReset,
   Memory,
   MonitorHeart,
-  Mouse,
   Numbers,
   Palette,
   PermContactCalendar,
-  Public,
-  PublicOff,
   Replay,
   RestartAlt,
-  RocketLaunch,
   SavedSearch,
-  Send,
-  SendTimeExtension,
   Settings,
-  SettingsEthernet,
   SnippetFolder,
-  Swipe,
   SwitchAccessShortcut,
   SyncAlt,
   TextFormat,
   ViewInAr,
   WebAsset,
   YoutubeSearchedFor,
-  ZoomOutMap,
 } from "@mui/icons-material";
 import {
   Box,
-  Button,
   Container,
   FormControlLabel,
   Grid,
@@ -75,11 +55,8 @@ import {
   Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { ipcRenderer, webFrame } from "electron";
-import { copy } from "fs-extra";
-import os from "os";
 import React, { useRef, useState } from "react";
-import { DOH_CONFIGURE } from "../modules/commons/Constants";
+import { getOsType } from "../impl/ClicornAPI";
 import {
   get,
   getBoolean,
@@ -88,15 +65,13 @@ import {
   parseNum,
   set,
 } from "../modules/config/ConfigSupport";
-import { getActualDataPath } from "../modules/config/DataSupport";
 import { loadMirror } from "../modules/download/Mirror";
-import { remoteSelectDir } from "./ContainerManager";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
   isBgDark,
 } from "./Renderer";
-import { AlicornTheme, useInputStyles } from "./Stylex";
+import { AlicornTheme } from "./Stylex";
 import { AL_THEMES } from "./ThemeColors";
 import { ALL_ASSISTANTS, tr } from "./Translator";
 
@@ -104,9 +79,7 @@ enum ConfigType {
   BOOL,
   NUM,
   STR,
-  DIR,
   RADIO,
-  FILE,
   SLIDE,
 }
 
@@ -188,23 +161,6 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"user.name"}
           />
           <InputItem
-            icon={<RocketLaunch />}
-            type={ConfigType.BOOL}
-            bindConfig={"auto-launch"}
-          />
-          <InputItem
-            type={ConfigType.SLIDE}
-            icon={<ZoomOutMap />}
-            bindConfig={"theme.zoom-factor"}
-            sliderMax={5.0}
-            sliderMin={0.1}
-            sliderStep={0.1}
-            onChange={() => {
-              webFrame.setZoomFactor(getNumber("theme.zoom-factor"));
-            }}
-            reload
-          />
-          <InputItem
             reload
             icon={<Inventory2 />}
             type={ConfigType.RADIO}
@@ -237,7 +193,7 @@ export function OptionsPage(): JSX.Element {
           />
           <InputItem
             icon={<CameraEnhance />}
-            type={ConfigType.FILE}
+            type={ConfigType.STR}
             save
             bindConfig={"theme.background.custom"}
           />
@@ -293,29 +249,9 @@ export function OptionsPage(): JSX.Element {
         </TabPanel>
         <TabPanel index={1} value={tabValue}>
           <InputItem
-            icon={<CalendarToday />}
-            type={ConfigType.BOOL}
-            bindConfig={"features.tips-of-today"}
-          />
-          <InputItem
             icon={<TextFormat />}
             type={ConfigType.BOOL}
             bindConfig={"features.saying"}
-          />
-          <InputItem
-            icon={<Send />}
-            type={ConfigType.BOOL}
-            bindConfig={"features.echo"}
-          />
-          <InputItem
-            icon={<Checkroom />}
-            type={ConfigType.BOOL}
-            bindConfig={"features.local-skin"}
-          />
-          <InputItem
-            icon={<Mouse />}
-            type={ConfigType.BOOL}
-            bindConfig={"features.sword"}
           />
           <InputItem
             icon={<ViewInAr />}
@@ -326,11 +262,6 @@ export function OptionsPage(): JSX.Element {
             icon={<Book />}
             type={ConfigType.BOOL}
             bindConfig={"features.miniwiki"}
-          />
-          <InputItem
-            icon={<SettingsEthernet />}
-            type={ConfigType.BOOL}
-            bindConfig={"features.detect-lan"}
           />
         </TabPanel>
         <TabPanel index={2} value={tabValue}>
@@ -346,34 +277,9 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"readyboom.cores"}
           />
           <InputItem
-            icon={<LockOpen />}
-            type={ConfigType.BOOL}
-            bindConfig={"pff.cursepp2"}
-          />
-          <InputItem
-            icon={<AlignHorizontalLeft />}
-            type={ConfigType.NUM}
-            bindConfig={"pff.cursepp-cluster-size"}
-          />
-          <InputItem
-            icon={<DeviceHub />}
-            type={ConfigType.STR}
-            bindConfig={"hoofoff.central"}
-          />
-          <InputItem
             icon={<SnippetFolder />}
-            type={ConfigType.DIR}
+            type={ConfigType.STR}
             bindConfig={"cx.shared-root"}
-          />
-          <InputItem
-            icon={<SendTimeExtension />}
-            type={ConfigType.BOOL}
-            bindConfig={"modx.global-dynamic-load-mods"}
-          />
-          <InputItem
-            icon={<ExtensionOff />}
-            type={ConfigType.BOOL}
-            bindConfig={"modx.ignore-non-standard-mods"}
           />
           <InputItem
             icon={<RestartAlt />}
@@ -456,18 +362,6 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"download.skip-validate"}
           />
           <InputItem
-            type={ConfigType.RADIO}
-            icon={<Downloading />}
-            bindConfig={"download.primary-downloader"}
-            choices={["Concurrent", "Serial"]}
-          />
-          <InputItem
-            icon={<Downloading />}
-            type={ConfigType.RADIO}
-            bindConfig={"download.lib"}
-            choices={["Undici", "Fetch"]}
-          />
-          <InputItem
             type={ConfigType.NUM}
             icon={<AccessTime />}
             bindConfig={"download.concurrent.timeout"}
@@ -488,24 +382,9 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"download.concurrent.max-tasks"}
           />
           <InputItem
-            icon={<Inbox />}
-            type={ConfigType.NUM}
-            bindConfig={"download.concurrent.chunk-size"}
-          />
-          <InputItem
             type={ConfigType.NUM}
             icon={<AccessTime />}
             bindConfig={"download.tls.keep-alive"}
-          />
-          <InputItem
-            type={ConfigType.NUM}
-            icon={<AlignHorizontalLeft />}
-            bindConfig={"download.tls.pipeline"}
-          />
-          <InputItem
-            type={ConfigType.NUM}
-            icon={<Inbox />}
-            bindConfig={"download.pff.chunk-size"}
           />
           <InputItem
             icon={<SyncAlt />}
@@ -514,7 +393,7 @@ export function OptionsPage(): JSX.Element {
             choices={["Override", "Keep"]}
           />
           <InputItem
-            type={ConfigType.DIR}
+            type={ConfigType.STR}
             icon={<Inbox />}
             bindConfig={"pff.cache-root"}
           />
@@ -522,27 +401,6 @@ export function OptionsPage(): JSX.Element {
             icon={<Inbox />}
             type={ConfigType.NUM}
             bindConfig={"pff.page-size"}
-          />
-          <InputItem
-            icon={<Public />}
-            type={ConfigType.STR}
-            bindConfig={"download.global-proxy"}
-          />
-          <InputItem
-            icon={<Public />}
-            type={ConfigType.STR}
-            bindConfig={"web.global-proxy"}
-          />
-          <InputItem
-            icon={<Dns />}
-            type={ConfigType.RADIO}
-            bindConfig={"doh-server"}
-            choices={Object.keys(DOH_CONFIGURE).concat(["Native"])}
-          />
-          <InputItem
-            icon={<PublicOff />}
-            type={ConfigType.STR}
-            bindConfig={"download.proxy-bypass"}
           />
         </TabPanel>
         <TabPanel index={5} value={tabValue}>
@@ -559,17 +417,6 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"updator.url"}
           />
           <InputItem
-            icon={<Swipe />}
-            type={ConfigType.RADIO}
-            bindConfig={"frame.drag-impl"}
-            choices={["Webkit", "Delta", "TitleBar"]}
-          />
-          <InputItem
-            type={ConfigType.BOOL}
-            icon={<DisplaySettings />}
-            bindConfig={"hardware-acc"}
-          />
-          <InputItem
             type={ConfigType.BOOL}
             icon={<Code />}
             bindConfig={"dev"}
@@ -578,16 +425,6 @@ export function OptionsPage(): JSX.Element {
             icon={<FirstPage />}
             type={ConfigType.BOOL}
             bindConfig={"first-run?"}
-          />
-          <InputItem
-            icon={<LockReset />}
-            type={ConfigType.BOOL}
-            bindConfig={"reset"}
-          />
-          <InputItem
-            type={ConfigType.BOOL}
-            icon={<CancelPresentation />}
-            bindConfig={"clean-storage"}
           />
         </TabPanel>
       </ThemeProvider>
@@ -631,18 +468,17 @@ function InputItem(props: {
     }
   };
   const [refreshBit, forceRefresh] = useState<boolean>(true);
-  const classex = useInputStyles();
   const [cSelect, setSelect] = useState<string>(
     getString(props.bindConfig, (props.choices || [""])[0] || "")
   );
   let disabled = false;
   if (props.onlyOn) {
-    if (os.platform() !== props.onlyOn) {
+    if (getOsType() !== props.onlyOn) {
       disabled = true;
     }
   }
   if (props.notOn) {
-    if (os.platform() === props.notOn) {
+    if (getOsType() === props.notOn) {
       disabled = true;
     }
   }
@@ -742,58 +578,6 @@ function InputItem(props: {
                 }}
               />
             );
-
-          case ConfigType.DIR:
-          case ConfigType.FILE:
-            return (
-              <>
-                <TextField
-                  disabled={disabled}
-                  fullWidth
-                  variant={"outlined"}
-                  spellCheck={false}
-                  color={"primary"}
-                  value={getString(props.bindConfig)}
-                  onChange={(e) => {
-                    markEdited(props.bindConfig);
-                    set(props.bindConfig, String(e.target.value || ""));
-                    forceRefresh(!refreshBit);
-                    callChange();
-                  }}
-                />
-                <Button
-                  className={classex.inputDark}
-                  type={"button"}
-                  variant={"contained"}
-                  sx={{
-                    marginTop: "0.25rem",
-                  }}
-                  onClick={async () => {
-                    let d =
-                      props.type === ConfigType.DIR
-                        ? await remoteSelectDir()
-                        : await remoteSelectFile();
-                    if (d.trim().length === 0) {
-                      return;
-                    }
-
-                    try {
-                      const target = getActualDataPath(
-                        props.bindConfig.replaceAll("?", "") + ".ald"
-                      );
-                      await copy(d, target);
-                      d = target;
-                    } catch {}
-                    set(props.bindConfig, d);
-                    markEdited(props.bindConfig);
-                    forceRefresh(!refreshBit);
-                    callChange();
-                  }}
-                >
-                  {tr("Options.Select")}
-                </Button>
-              </>
-            );
           case ConfigType.RADIO:
             return (
               <RadioGroup
@@ -865,9 +649,6 @@ function InputItem(props: {
     </Container>
   );
 }
-async function remoteSelectFile(): Promise<string> {
-  return String((await ipcRenderer.invoke("selectFile")) || "");
-}
 function TabPanel(props: {
   children?: React.ReactNode;
   index: string | number;
@@ -876,7 +657,7 @@ function TabPanel(props: {
   const { children, value, index } = props;
   return (
     <Box hidden={value !== index}>
-      {value === index ? <Box p={3}>{children}</Box> : ""}
+      {value === index ? <Box>{children}</Box> : ""}
     </Box>
   );
 }

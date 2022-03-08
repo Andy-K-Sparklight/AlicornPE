@@ -1,4 +1,4 @@
-import path from "path";
+import { pathNormalize } from "../../impl/Path";
 
 export abstract class AbstractDownloader {
   abstract downloadFile(meta: DownloadMeta): Promise<DownloadStatus>;
@@ -11,9 +11,7 @@ export class DownloadMeta {
   readonly size: number;
   constructor(url: string, savePath: string, sha1 = "", size = 0) {
     this.url = url;
-    this.savePath = path.isAbsolute(savePath)
-      ? path.normalize(savePath)
-      : path.resolve(savePath);
+    this.savePath = pathNormalize(savePath);
     this.sha1 = sha1;
     this.size = size;
   }

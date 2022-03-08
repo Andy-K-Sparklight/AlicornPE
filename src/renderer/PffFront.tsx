@@ -2,7 +2,6 @@ import { ArrowForward } from "@mui/icons-material";
 import {
   Alert,
   Avatar,
-  Badge,
   Box,
   Button,
   CircularProgress,
@@ -14,24 +13,15 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  Tab,
-  Tabs,
   TextField,
   ThemeProvider,
   Typography,
 } from "@mui/material";
-import { shell } from "electron";
-import EventEmitter from "events";
-import path from "path";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
-import { getBoolean } from "../modules/config/ConfigSupport";
+import { EventEmitter } from "../impl/EventEmitter";
 import { getContainer as _getContainer } from "../modules/container/ContainerUtil";
 import { MinecraftContainer } from "../modules/container/MinecraftContainer";
-import { configureModDepChain, UnmetDepUnit } from "../modules/modx/ModDeps";
-import { loadMetas } from "../modules/modx/ModDynLoad";
-import { ModInfo, ModLoader } from "../modules/modx/ModInfo";
-import { canModVersionApply } from "../modules/modx/ModVersionUtil";
 import {
   loadLockfile,
   Lockfile2,
@@ -40,7 +30,6 @@ import {
 import { fetchModByName, setPffFlag } from "../modules/pff/virtual/PffWrapper";
 import { modLoaderOf } from "../modules/pff/virtual/Resolver";
 import { setChangePageWarn } from "./GoTo";
-import { Icons } from "./Icons";
 import { hasEdited } from "./Options";
 import { ALICORN_DEFAULT_THEME_LIGHT } from "./Renderer";
 import { fullWidth } from "./Stylex";
@@ -69,10 +58,8 @@ export function PffFront(): JSX.Element {
   const [info, setInfo] = useState("");
   const [packageName, setPackageName] = useState(name || "");
   const [lockfile, setLockfile] = useState<Lockfile2>();
-  const [allMods, setAllMods] = useState<ModInfo[]>([]);
   const mounted = useRef(false);
   const logs = useRef<string[]>([]);
-  const [unmetWarns, setUnmetWarns] = useState<UnmetDepUnit[]>([]);
   const fullWidthClasses = fullWidth();
   const [isDirty, setDirty] = useState(false);
 
@@ -80,32 +67,6 @@ export function PffFront(): JSX.Element {
     return chroot(_getContainer(c), root);
   };
 
-  const f = async () => {
-    const m = await loadMetas(getContainer(container));
-    if (mounted.current) {
-      m.sort((a, b) => {
-        if ((a.displayName || "") > (b.displayName || "")) {
-          return 1;
-        }
-        return -1;
-      });
-      setAllMods(m);
-    }
-  };
-  const f1 = async () => {
-    const a = await configureModDepChain(
-      getContainer(container),
-      loader as ModLoader
-    );
-    if (mounted.current) {
-      setUnmetWarns(a);
-    }
-  };
-  useEffect(() => {
-    if (!isDirty) {
-      void Promise.allSettled([f(), f1()]);
-    }
-  }, [isDirty]);
   useEffect(() => {
     void (async () => {
       const lock = await loadLockfile(getContainer(container));
@@ -244,42 +205,6 @@ export function PffFront(): JSX.Element {
         )}
       </Container>
       <>
-        <Tabs
-          variant={"fullWidth"}
-          value={val}
-          onChange={(_e, v) => {
-            setVal(v);
-          }}
-        >
-          <Tab
-            label={
-              <Badge
-                badgeContent={Object.keys(lockfile || {}).length}
-                color={"primary"}
-              >
-                <Typography color={"primary"}>
-                  {tr("PffFront.QuickWatch")}
-                </Typography>
-              </Badge>
-            }
-          />
-          <Tab
-            label={
-              <Badge badgeContent={allMods.length} color={"primary"}>
-                <Typography color={"primary"}>{tr("PffFront.Mods")}</Typography>
-              </Badge>
-            }
-          />
-          <Tab
-            label={
-              <Badge badgeContent={unmetWarns.length} color={"primary"}>
-                <Typography color={"primary"}>
-                  {tr("PffFront.UnmetDeps")}
-                </Typography>
-              </Badge>
-            }
-          />
-        </Tabs>
         {isDirty ? (
           <Alert
             severity={"info"}
@@ -292,165 +217,75 @@ export function PffFront(): JSX.Element {
         ) : (
           ""
         )}
-        <TabPanel value={val} index={0}>
-          <Container>
-            <Typography
-              className={fullWidthClasses.text + " smtxt"}
-              color={"secondary"}
-            >
-              {tr("PffFront.Hint")}
-            </Typography>
-            {!lockfile || Object.keys(lockfile).length === 0 ? (
-              <Alert severity={"info"}>{tr("PffFront.NoneDetected")}</Alert>
-            ) : (
-              <Button
-                disabled={isRunning}
-                onClick={() => {
-                  const p = Object.values(lockfile)
-                    .filter(
-                      (v) =>
-                        v.selectedArtifact.gameVersion.includes(version) &&
-                        v.selectedArtifact.modLoader === loader
-                    )
-                    .map((v) => {
-                      return (
-                        "@" +
-                        v.provider +
-                        ":" +
-                        v.id +
-                        "/" +
-                        v.selectedArtifact.id
-                      );
-                    })
-                    .join(" ");
-                  setPackageName(p);
-                  start(p);
-                }}
-                variant={"contained"}
-                color={"primary"}
-              >
-                {tr("PffFront.UpgradeAll")}
-              </Button>
-            )}
-            <List>
-              {lockfile
-                ? Object.keys(lockfile).map((name) => {
+        <Container>
+          <Typography
+            className={fullWidthClasses.text + " smtxt"}
+            color={"secondary"}
+          >
+            {tr("PffFront.Hint")}
+          </Typography>
+          {!lockfile || Object.keys(lockfile).length === 0 ? (
+            <Alert severity={"info"}>{tr("PffFront.NoneDetected")}</Alert>
+          ) : (
+            <Button
+              disabled={isRunning}
+              onClick={() => {
+                const p = Object.values(lockfile)
+                  .filter(
+                    (v) =>
+                      v.selectedArtifact.gameVersion.includes(version) &&
+                      v.selectedArtifact.modLoader === loader
+                  )
+                  .map((v) => {
                     return (
-                      <SinglePffModDisplay
-                        meta={lockfile[name]}
-                        version={version}
-                        loader={loader}
-                        container={container}
-                        key={name}
-                        onUpdate={() => {
-                          if (!isRunning) {
-                            const pName =
-                              "@" +
-                              lockfile[name].provider +
-                              ":" +
-                              lockfile[name].id +
-                              "/" +
-                              lockfile[name].selectedArtifact.id;
-                            setPackageName(pName);
-                            start(pName);
-                          }
-                        }}
-                        root={root}
-                      />
+                      "@" +
+                      v.provider +
+                      ":" +
+                      v.id +
+                      "/" +
+                      v.selectedArtifact.id
                     );
                   })
-                : []}
-            </List>
-          </Container>
-        </TabPanel>
-        <TabPanel value={val} index={1}>
-          <Container>
-            <Typography
-              className={fullWidthClasses.text + " smtxt"}
-              color={"secondary"}
+                  .join(" ");
+                setPackageName(p);
+                start(p);
+              }}
+              variant={"contained"}
+              color={"primary"}
             >
-              {tr("PffFront.ModsHint")}
-            </Typography>
-            {allMods.length === 0 ? (
-              <Alert severity={"info"}>{tr("PffFront.NoneDetected")}</Alert>
-            ) : (
-              ""
-            )}
-            <List>
-              {allMods.map((m) => {
-                if (m.displayName && m.fileName) {
+              {tr("PffFront.UpgradeAll")}
+            </Button>
+          )}
+          <List>
+            {lockfile
+              ? Object.keys(lockfile).map((name) => {
                   return (
-                    <SingleModDisplay
-                      m={m}
-                      key={m.fileName}
-                      loader={
-                        loader === "Forge"
-                          ? ModLoader.FORGE
-                          : loader === "Fabric"
-                          ? ModLoader.FABRIC
-                          : ModLoader.UNKNOWN
-                      }
-                      mcversion={version}
+                    <SinglePffModDisplay
+                      meta={lockfile[name]}
+                      version={version}
+                      loader={loader}
+                      container={container}
+                      key={name}
+                      onUpdate={() => {
+                        if (!isRunning) {
+                          const pName =
+                            "@" +
+                            lockfile[name].provider +
+                            ":" +
+                            lockfile[name].id +
+                            "/" +
+                            lockfile[name].selectedArtifact.id;
+                          setPackageName(pName);
+                          start(pName);
+                        }
+                      }}
+                      root={root}
                     />
                   );
-                }
-                return "";
-              })}
-            </List>
-          </Container>
-        </TabPanel>
-        <TabPanel value={val} index={2}>
-          <Container>
-            <br />
-            {unmetWarns.length > 0 ? (
-              <Button
-                color={"primary"}
-                onClick={() => {
-                  if (!isRunning) {
-                    const t0: Set<string> = new Set();
-                    unmetWarns.forEach((v) => {
-                      t0.add(v.missing);
-                    });
-                    const pkgs = Array.from(t0).join(" ");
-                    setPackageName(pkgs);
-                    start(pkgs);
-                  }
-                }}
-                variant={"contained"}
-              >
-                {tr("PffFront.InstallAll")}
-              </Button>
-            ) : (
-              ""
-            )}
-            {unmetWarns.map((u) => {
-              return (
-                <Alert
-                  key={u.origin + u.name + u.missing}
-                  severity={"warning"}
-                  onClick={() => {
-                    if (!isRunning) {
-                      setPackageName(u.missing);
-                      start(u.missing);
-                    }
-                  }}
-                >
-                  {tr(
-                    "PffFront.MissingDep",
-                    `Origin=${path.basename(u.origin)}`,
-                    `Name=${u.name}`,
-                    `Missing=${u.missing}`
-                  )}
-                </Alert>
-              );
-            })}
-            {unmetWarns.length === 0 ? (
-              <Alert severity={"info"}>{tr("PffFront.DepOK")}</Alert>
-            ) : (
-              ""
-            )}
-          </Container>
-        </TabPanel>
+                })
+              : []}
+          </List>
+        </Container>
       </>
     </ThemeProvider>
   );
@@ -492,16 +327,6 @@ function SinglePffModDisplay(props: {
             e.preventDefault();
           }
         }}
-        onClick={(e) => {
-          if (e.button === 2) {
-            return;
-          }
-          shell.showItemInFolder(
-            chroot(_getContainer(props.container), props.root).getModJar(
-              props.meta.selectedArtifact.fileName
-            )
-          );
-        }}
         primary={
           <Typography
             sx={{
@@ -526,87 +351,6 @@ function SinglePffModDisplay(props: {
           >{`[${props.meta.id} / ${props.meta.selectedArtifact.id}] ${
             props.meta.selectedArtifact.fileName
           } ${new Date(props.meta.insallDate).toLocaleString()}`}</Typography>
-        }
-      />
-    </ListItem>
-  );
-}
-
-function SingleModDisplay(props: {
-  m: ModInfo;
-  loader: ModLoader;
-  mcversion: string;
-}): JSX.Element {
-  const modmcv = props.m.mcversion || "*";
-  const compatible =
-    (props.m.loader === props.loader ||
-      (props.m.loader === ModLoader.UNKNOWN &&
-        getBoolean("modx.ignore-non-standard-mods"))) &&
-    canModVersionApply(
-      modmcv,
-      props.mcversion,
-      props.m.loader === ModLoader.FABRIC
-    );
-  const [showDesc, setShowDesc] = useState(false);
-  return (
-    <ListItem
-      alignItems={"flex-start"}
-      onMouseOver={() => {
-        if (props.m.description) {
-          setShowDesc(true);
-        }
-      }}
-      onMouseLeave={() => {
-        if (props.m.description) {
-          setShowDesc(false);
-        }
-      }}
-      onClick={() => {
-        if (props.m.fileName) {
-          void shell.showItemInFolder(props.m.fileName);
-        }
-      }}
-    >
-      <ListItemAvatar>
-        <Avatar
-          alt={props.m.displayName}
-          variant={"square"}
-          src={
-            props.m.loader === ModLoader.FORGE
-              ? Icons.PROFILE_FORGE
-              : props.m.loader === ModLoader.FABRIC
-              ? Icons.PROFILE_FABRIC
-              : Icons.PROFILE_UNKNOWN
-          }
-        />
-      </ListItemAvatar>
-      <ListItemText
-        primary={
-          <Typography
-            sx={{
-              textDecoration: !compatible ? "line-through" : undefined,
-              fontWeight: showDesc ? "bold" : undefined,
-              color: compatible ? "primary.main" : "gray",
-            }}
-            color={"primary"}
-          >
-            {props.m.displayName}
-          </Typography>
-        }
-        secondary={
-          <Typography
-            color={"secondary"}
-            sx={{
-              textDecoration:
-                !compatible && !showDesc ? "line-through" : undefined,
-              fontWeight: showDesc ? "bold" : undefined,
-              color: compatible ? "secondary.main" : "gray",
-            }}
-          >
-            {showDesc
-              ? props.m.description
-              : `[${props.m.id}] ` + path.basename(props.m.fileName || "")}
-          </Typography>
         }
       />
     </ListItem>

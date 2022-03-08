@@ -1,6 +1,6 @@
-import path from "path";
+import { isFileExist } from "../../impl/ClicornAPI";
+import { pathNormalize } from "../../impl/Path";
 import { ALICORN_DATA_SUFFIX } from "../commons/Constants";
-import { isFileExist } from "../commons/FileUtil";
 import { buildMap, parseMap } from "../commons/MapUtil";
 import { isNull } from "../commons/Null";
 import { getActualDataPath, loadData, saveData } from "../config/DataSupport";
@@ -26,18 +26,16 @@ export async function initVF(): Promise<void> {
 }
 
 export function getLastValidateModified(file: string): Date {
-  const f = VF.get(path.resolve(file));
+  const f = VF.get(pathNormalize(file));
   return new Date(isNull(f) ? 0 : String(f));
 }
 
 export function updateRecord(file: string): void {
-  file = path.isAbsolute(file) ? file : path.resolve(file);
-  VF.set(file, new Date().toUTCString());
+  VF.set(pathNormalize(file), new Date().toUTCString());
 }
 
 export function deleteRecord(file: string): void {
-  file = path.isAbsolute(file) ? file : path.resolve(file);
-  VF.delete(path.resolve(file));
+  VF.delete(pathNormalize(file));
 }
 
 export async function saveVF(): Promise<void> {

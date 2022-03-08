@@ -39,7 +39,7 @@
   "launch.fast-reboot": true,
   "assistant": "",
   "hardware-acc": false,
-  "download.primary-downloader": "Concurrent",
+  "download.primary-downloader": "Serial",
   "goto.animate": true,
   "dev.experimental": false,
   "web.global-proxy": "",

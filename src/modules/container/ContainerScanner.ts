@@ -1,5 +1,10 @@
-import fs from "fs-extra";
-import path from "path";
+import {
+  closeFile,
+  openFile,
+  readDirectory,
+  readFile,
+} from "../../impl/ClicornAPI";
+import { pathJoin } from "../../impl/Path";
 import { GameProfile } from "../profile/GameProfile";
 import { getAllContainers, getContainer, isMounted } from "./ContainerUtil";
 import { MinecraftContainer } from "./MinecraftContainer";
@@ -10,7 +15,7 @@ export async function scanCoresIn(
 ): Promise<string[]> {
   const cRoot = c.getVersionBase();
   try {
-    const allV = await fs.readdir(cRoot);
+    const allV = await readDirectory(cRoot);
     const tArr: string[] = [];
     await Promise.all(
       allV.map((v) => {
@@ -20,7 +25,7 @@ export async function scanCoresIn(
             resolve();
             return;
           }
-          void isValidCore(path.join(cRoot, v)).then((i) => {
+          void isValidCore(pathJoin(cRoot, v)).then((i) => {
             if (i) {
               tArr.push(v);
             }
@@ -37,9 +42,10 @@ export async function scanCoresIn(
 
 async function isValidCore(profileRoot: string): Promise<boolean> {
   try {
-    const v = path.basename(profileRoot);
-    const expectedProfile = path.join(profileRoot, v + ".json");
-    new GameProfile(await fs.readJSON(expectedProfile)); // This contains validate
+    const fd = await openFile(profileRoot, "r");
+    const dt = await readFile(fd);
+    await closeFile(fd);
+    new GameProfile(JSON.parse(dt.toString())); // This contains validate
     return true;
   } catch {
     return false;

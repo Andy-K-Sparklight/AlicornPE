@@ -1,18 +1,15 @@
-import fs from "fs-extra";
-import path from "path";
-import { abortableBasicHash, abortableUniqueHash } from "../commons/BasicHash";
+import { netGet, readDirectory, remove } from "../../impl/ClicornAPI";
+import { pathJoin } from "../../impl/Path";
+import { uniqueHash } from "../commons/BasicHash";
 import { Pair } from "../commons/Collections";
 import { ALICORN_ENCRYPTED_DATA_SUFFIX } from "../commons/Constants";
-import { isFileExist } from "../commons/FileUtil";
 import { getActualDataPath, loadData, saveData } from "../config/DataSupport";
 import { decrypt2, decryptByMachine, encrypt2 } from "../security/Encrypt";
-import { skinTypeFor } from "../skin/LocalYggdrasilServer";
 import { Account } from "./Account";
 import { AuthlibAccount, getSkinByUUID } from "./AuthlibAccount";
 import { LocalAccount } from "./LocalAccount";
 import { MicrosoftAccount } from "./MicrosoftAccount";
 import { getMojangSkinByUUID, MojangAccount } from "./MojangAccount";
-import { Nide8Account } from "./Nide8Account";
 
 // Account Prefix
 // DO NOT EDIT THIS - VALUES ARE VERY ESSENTIAL
@@ -20,13 +17,11 @@ import { Nide8Account } from "./Nide8Account";
 // $MZ! Microsoft Account
 // $BJ! Mojang Account
 // $AJ! Authlib Injector
-// $ND! Nide8
 enum AccountType {
   MICROSOFT = "$MZ!",
   ALICORN = "$AL!",
   AUTHLIB_INJECTOR = "$AJ!",
   MOJANG = "$BJ!",
-  NIDE8 = "$ND!",
 }
 
 const ACCOUNT_ROOT = "accounts";
@@ -37,7 +32,7 @@ export async function saveAccount(a: Account): Promise<boolean> {
   try {
     const fName = a.getAccountIdentifier() + ALICORN_ENCRYPTED_DATA_SUFFIX;
     await saveData(
-      path.join(ACCOUNT_ROOT, fName),
+      pathJoin(ACCOUNT_ROOT, fName),
       encrypt2(decideWhichAccountByCls(a) + a.serialize())
     );
     await reloadAccounts();
@@ -49,7 +44,7 @@ export async function saveAccount(a: Account): Promise<boolean> {
 
 export async function getAllAccounts(): Promise<string[]> {
   try {
-    return await fs.readdir(getActualDataPath(ACCOUNT_ROOT));
+    return await readDirectory(getActualDataPath(ACCOUNT_ROOT));
   } catch {
     return [];
   }
@@ -57,14 +52,12 @@ export async function getAllAccounts(): Promise<string[]> {
 
 export async function loadAccount(fName: string): Promise<Account | null> {
   try {
-    const s = await loadData(path.join(ACCOUNT_ROOT, fName));
+    const s = await loadData(pathJoin(ACCOUNT_ROOT, fName));
     const deSOld = decryptByMachine(s);
     const deSNew = decrypt2(s);
     const deS = deSNew.startsWith("$") ? deSNew : deSOld;
     const p = decideWhichAccountByHead(deS);
     switch (p.getFirstValue()) {
-      case AccountType.NIDE8:
-        return loadNDAccount(p.getSecondValue());
       case AccountType.AUTHLIB_INJECTOR:
         return loadAJAccount(p.getSecondValue());
       case AccountType.MOJANG:
@@ -82,17 +75,6 @@ export async function loadAccount(fName: string): Promise<Account | null> {
 
 function loadLocalAccount(obj: Record<string, unknown>): LocalAccount {
   const la = new LocalAccount(String(obj["accountName"] || ""));
-  la.lastUsedUsername = String(obj["lastUsedUsername"] || "");
-  la.lastUsedAccessToken = String(obj["lastUsedAccessToken"] || "");
-  la.lastUsedUUID = String(obj["lastUsedUUID"] || "");
-  return la;
-}
-
-function loadNDAccount(obj: Record<string, unknown>): Nide8Account {
-  const la = new Nide8Account(
-    String(obj["accountName"] || ""),
-    String(obj["serverId"] || "")
-  );
   la.lastUsedUsername = String(obj["lastUsedUsername"] || "");
   la.lastUsedAccessToken = String(obj["lastUsedAccessToken"] || "");
   la.lastUsedUUID = String(obj["lastUsedUUID"] || "");
@@ -129,9 +111,6 @@ function loadMSAccount(obj: Record<string, unknown>): MicrosoftAccount {
 }
 
 function decideWhichAccountByCls(a: Account): AccountType {
-  if (a instanceof Nide8Account) {
-    return AccountType.NIDE8;
-  }
   if (a instanceof AuthlibAccount) {
     return AccountType.AUTHLIB_INJECTOR;
   }
@@ -151,9 +130,6 @@ function decideWhichAccountByHead(
     let p1;
     const p2 = JSON.parse(str.slice(4));
     switch (str.slice(0, 4)) {
-      case AccountType.NIDE8:
-        p1 = AccountType.NIDE8;
-        break;
       case AccountType.MICROSOFT:
         p1 = AccountType.MICROSOFT;
         break;
@@ -179,7 +155,7 @@ function decideWhichAccountByHead(
 
 export async function removeAccount(fName: string): Promise<void> {
   try {
-    await fs.remove(getActualDataPath(path.join(ACCOUNT_ROOT, fName)));
+    await remove(getActualDataPath(pathJoin(ACCOUNT_ROOT, fName)));
   } catch {}
 }
 
@@ -188,17 +164,6 @@ export function copyAccount(aIn: Account | undefined): Account {
     return new LocalAccount("Player");
   }
   switch (aIn.type) {
-    case AccountType.NIDE8: {
-      const ai = aIn as Nide8Account;
-      const ac = new Nide8Account(aIn.accountName, ai.serverId);
-      ac.availableProfiles = ai.availableProfiles;
-      ac.accountName = ai.accountName;
-      ac.lastUsedUUID = ai.lastUsedUUID;
-      ac.lastUsedAccessToken = ai.lastUsedAccessToken;
-      ac.lastUsedUsername = ai.lastUsedUsername;
-      ac.selectedProfile = ai.selectedProfile;
-      return ac;
-    }
     case AccountType.MICROSOFT:
       return new MicrosoftAccount(aIn.accountName);
     case AccountType.MOJANG: {
@@ -284,28 +249,7 @@ export function querySkinFor(a: Account): Promise<string> {
         ) {
           u = await getMojangSkinByUUID(a);
         } else if (a instanceof LocalAccount) {
-          const s = await skinTypeFor(a as LocalAccount);
-          if (s === "NONE") {
-            res("");
-            return;
-          }
-          const adef = getActualDataPath(
-            path.join("skins", s.slice(0, 1) + "-" + "DEF")
-          );
-          const apar = getActualDataPath(
-            path.join(
-              "skins",
-              s.slice(0, 1) + "-" + (await abortableBasicHash(a.lastUsedUUID))
-            )
-          );
-          let au = "";
-          if (await isFileExist(apar)) {
-            au = "file://" + apar;
-          } else if (await isFileExist(adef)) {
-            au = "file://" + adef;
-          }
-          res(au);
-          return; // No cache since Carousel Boutique often offer new clothes ;)
+          res(""); // It's not possible
         }
         ACCOUNT_SKIN_MAP.set(key, u);
         if (!resolved) {
@@ -320,28 +264,19 @@ export function querySkinFor(a: Account): Promise<string> {
 }
 async function cacheSkin(key: string, u: string): Promise<void> {
   try {
-    const res = await fetch(u, {
-      method: "GET",
-      credentials: "omit",
-    });
-    if (res.ok) {
-      const d = await res.blob();
-      const buf = Buffer.from(await d.arrayBuffer());
-      const s = buf.toString("base64");
-      ACCOUNT_SKIN_DATA_MAP.set(key, "data:image/png;base64," + s);
-      await saveData(
-        "skincache/" + (await abortableUniqueHash(key)) + ".skincache",
-        s
-      );
+    const res = await netGet(u, "{}", 0);
+    if (res.status < 200 || res.status >= 300) {
+      return;
     }
+    const s = res.body.toString("base64");
+    ACCOUNT_SKIN_DATA_MAP.set(key, "data:image/png;base64," + s);
+    await saveData("skincache/" + uniqueHash(key) + ".skincache", s);
   } catch {}
 }
 
 async function loadCachedSkin(key: string): Promise<string> {
   try {
-    const d = await loadData(
-      "skincache/" + (await abortableUniqueHash(key)) + ".skincache"
-    );
+    const d = await loadData("skincache/" + uniqueHash(key) + ".skincache");
     if (d) {
       return "data:image/png;base64," + d;
     }

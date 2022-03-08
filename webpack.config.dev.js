@@ -1,90 +1,10 @@
 const path = require("path");
-const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { ContextReplacementPlugin } = require("webpack");
-const BuildInfoPlugin = require("./BuildInfoPlugin");
-const Version = require("./package.json").appVersion;
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-const MainDev = {
-  entry: "./src/main/Bootstrap.ts",
-  output: {
-    filename: "Bootstrap.js",
-    path: path.resolve(__dirname, "dist"),
-    pathinfo: false,
-  },
-  module: {
-    unknownContextCritical: false,
-    rules: [
-      {
-        test: /\.tsx?$/,
-        include: path.resolve(__dirname, "src"),
-        use: {
-          loader: "ts-loader",
-          options: {
-            transpileOnly: true,
-            experimentalWatchApi: true,
-          },
-        },
-        exclude: /node_modules/,
-      },
-    ],
-  },
-  resolve: {
-    extensions: [".ts", ".js"],
-    alias: {
-      ws: path.resolve("./node_modules/ws/index.js"),
-    },
-  },
-  plugins: [
-    new BuildInfoPlugin("MainBuild.json", Version),
-    new ContextReplacementPlugin(/keyv/),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: path.resolve(__dirname, "resources", "shared"),
-          to: path.resolve(__dirname, "dist"),
-        },
-        {
-          from: path.resolve(
-            __dirname,
-            "node_modules",
-            "undici",
-            "lib",
-            "llhttp",
-            "llhttp.wasm"
-          ),
-          to: path.resolve(__dirname, "dist", "llhttp", "llhttp.wasm"),
-        },
-        {
-          from: path.resolve(
-            __dirname,
-            "node_modules",
-            "undici",
-            "lib",
-            "llhttp",
-            "llhttp_simd.wasm"
-          ),
-          to: path.resolve(__dirname, "dist", "llhttp", "llhttp_simd.wasm"),
-        },
-      ],
-    }),
-  ],
-  devtool: "eval-source-map",
-  mode: "development",
-  target: "electron-main",
-  externals: {
-    bufferutil: "bufferutil",
-    "utf-8-validate": "utf-8-validate",
-  },
-  watchOptions: {
-    ignored: ["**/node_modules", "**/dist"],
-  },
-};
-
-const RendererDev = {
+module.exports = {
   entry: {
     Renderer: "./src/renderer/Renderer.tsx",
-    LibWorker: "./src/renderer/worker/LibWorker.js",
-    BotWorker: "./src/modules/boticorn/BotWorker.js",
   },
   output: {
     filename: "[name].js",
@@ -109,18 +29,28 @@ const RendererDev = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
+    alias: {
+      react: "preact/compat",
+      "react-dom/test-utils": "preact/test-utils",
+      "react-dom": "preact/compat",
+    },
   },
   plugins: [
-    new BuildInfoPlugin("RendererBuild.json", Version),
     new ContextReplacementPlugin(/keyv/),
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "resources", "shared"),
+          to: path.resolve(__dirname, "dist"),
+        },
+      ],
+    }),
   ],
-  devtool: "eval-source-map",
+  devtool: "cheap-source-map",
   mode: "development",
-  target: "electron-renderer",
+  target: "web",
   watchOptions: {
     ignored: ["**/node_modules", "**/dist"],
   },
   externals: { "util/types": "commonjs util/types" },
 };
-
-module.exports = [MainDev, RendererDev];

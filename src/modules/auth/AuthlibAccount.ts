@@ -1,4 +1,5 @@
 import { atob } from "js-base64";
+import { netGet } from "../../impl/ClicornAPI";
 import { uniqueHash } from "../commons/BasicHash";
 import { safeGet } from "../commons/Null";
 import {
@@ -85,16 +86,15 @@ export async function getSkinByUUID(a: AuthlibAccount): Promise<string> {
     const o =
       a.authServer +
       `/sessionserver/session/minecraft/profile/${a.lastUsedUUID}`;
-    const response = await (
-      await fetch(o, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-cache",
-        credentials: "include",
-      })
-    ).json();
+    const res = await netGet(
+      o,
+      JSON.stringify({ "Content-Type": "application/json" }),
+      0
+    );
+    if (res.status < 200 || res.status >= 300) {
+      return "";
+    }
+    const response = JSON.parse(res.body.toString());
     const props = safeGet(response, ["properties"]);
     if (!(props instanceof Array)) {
       return "";

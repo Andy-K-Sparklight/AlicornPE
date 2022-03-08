@@ -1,9 +1,6 @@
-import childProcess from "child_process";
-import fs from "fs-extra";
-import os from "os";
-import path from "path";
-import { invokeWorker } from "../../renderer/Schedule";
-import { isFileExist } from "../commons/FileUtil";
+import { getOsType, isFileExist, spawnProc } from "../../impl/ClicornAPI";
+import { pathDirname, pathJoin } from "../../impl/Path";
+import { diveSearch0 } from "../../renderer/Schedule";
 import { getBoolean, getNumber } from "../config/ConfigSupport";
 import { resetJavaList } from "./JavaInfo";
 
@@ -16,7 +13,7 @@ export async function whereJava(
 ): Promise<string[]> {
   let all: string[] = [];
   all = all.concat(await findJavaViaCommand());
-  all.push(findJavaInPATH());
+  all.push(await findJavaInPATH());
   if (justExist && all.length > 0) {
     const p = await chkJava(all);
     if (p.length > 0) {
@@ -24,7 +21,7 @@ export async function whereJava(
     }
   }
   if (!getBoolean("java.simple-search")) {
-    if (os.platform() === "win32") {
+    if (getOsType() === "win32") {
       all = all.concat(await findJavaInProgramFilesWin32(justExist));
     } else {
       all = all.concat(await findJavaUNIX(justExist));
@@ -43,7 +40,7 @@ async function chkJava(all: string[]): Promise<string[]> {
   const res: string[] = [];
   for (const a of all) {
     if (await isFileExist(a)) {
-      const trimA = path.resolve(path.dirname(path.dirname(a.trim())));
+      const trimA = pathDirname(pathDirname(a.trim()));
       if (trimA !== "" && !res.includes(trimA)) {
         res.push(trimA);
         // Get Java home
@@ -54,7 +51,7 @@ async function chkJava(all: string[]): Promise<string[]> {
 }
 
 async function findJavaUNIX(any = false): Promise<string[]> {
-  if (os.platform() === "win32") {
+  if (getOsType() === "win32") {
     return [];
   }
   const programBase = "/usr/";
@@ -70,24 +67,24 @@ async function findJavaUNIX(any = false): Promise<string[]> {
   return all;
 }
 
-function findJavaInPATH(): string {
+async function findJavaInPATH(): Promise<string> {
   const javaPath = process.env["JAVA_HOME"];
   if (javaPath === undefined) {
     return "";
   }
   let javaName = "java";
-  if (os.platform() === "win32") {
+  if (getOsType() === "win32") {
     javaName = "java.exe";
   }
-  const testJavaPath = path.join(javaPath, "bin", javaName);
-  if (fs.existsSync(testJavaPath)) {
+  const testJavaPath = pathJoin(javaPath, "bin", javaName);
+  if (await isFileExist(testJavaPath)) {
     return testJavaPath;
   }
   return "";
 }
 
 async function findJavaInProgramFilesWin32(any = false): Promise<string[]> {
-  if (os.platform() !== "win32") {
+  if (getOsType() !== "win32") {
     return [];
   }
   const programBaseMain = "C:\\Program Files";
@@ -117,32 +114,20 @@ async function findJavaInProgramFilesWin32(any = false): Promise<string[]> {
 // Use command to locate
 async function findJavaViaCommand(): Promise<string[]> {
   let command = "which java";
-  if (os.platform() === "win32") {
+  if (getOsType() === "win32") {
     command = "where java";
   }
-  return await new Promise<string[]>((resolve) => {
-    childProcess.exec(
-      command,
-      {
-        cwd: os.homedir(),
-      },
-      (error, stdout) => {
-        if (!error) {
-          const result = [];
-          const resultRaw = stdout.split(os.EOL);
-          for (const r of resultRaw) {
-            const trimR = r.trim();
-            if (trimR !== "") {
-              result.push(trimR);
-            }
-          }
-          resolve(result);
-        } else {
-          resolve([]);
-        }
-      }
-    );
-  });
+  const pc = await spawnProc(command);
+  const resultRaw: string[] = [];
+  const result = [];
+
+  for (const r of resultRaw) {
+    const trimR = r.trim();
+    if (trimR !== "") {
+      result.push(trimR);
+    }
+  }
+  return result;
 }
 
 async function diveSearch(
@@ -153,14 +138,7 @@ async function diveSearch(
   counter = 0,
   any = false
 ): Promise<void> {
-  const res = await invokeWorker(
-    "DiveSearch",
-    fileName,
-    rootDir,
-    depth,
-    counter,
-    any
-  );
+  const res = await diveSearch0(fileName, rootDir, depth, counter, any);
   if (res instanceof Array) {
     res.forEach((s) => {
       concatArray.push(s);

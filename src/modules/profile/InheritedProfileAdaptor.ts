@@ -5,10 +5,10 @@
 // Why not automate? We need it!
 // You builds FREE software rather than SPONSOR ones, thank you very much!
 // Anyway, we'll keep on supporting Forge since there are tremendous requirements.
-import { copy, remove } from "fs-extra";
-import path from "path";
+import { remove } from "../../impl/ClicornAPI";
+import { pathJoin } from "../../impl/Path";
 import { ReleaseType, SPACE } from "../commons/Constants";
-import { isFileExistAndNonEmpty } from "../commons/FileUtil";
+import { copyFileRW, isFileExistAndNonEmpty } from "../commons/FileUtil";
 import { isNull } from "../commons/Null";
 import { MinecraftContainer } from "../container/MinecraftContainer";
 import { JAR_SUFFIX } from "../launch/NativesLint";
@@ -111,16 +111,15 @@ async function prepareClient(
   container: MinecraftContainer
 ): Promise<void> {
   try {
-    const t = path.join(
+    const t = pathJoin(
       container.getVersionRoot(modifiedId),
       modifiedId + JAR_SUFFIX
     );
     if (!(await isFileExistAndNonEmpty(t))) {
       await remove(t);
-      await copy(
-        path.join(container.getVersionRoot(sourceId), sourceId + JAR_SUFFIX),
-        t,
-        { dereference: true }
+      await copyFileRW(
+        pathJoin(container.getVersionRoot(sourceId), sourceId + JAR_SUFFIX),
+        t
       );
     }
   } catch (e) {

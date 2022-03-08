@@ -1,7 +1,7 @@
-import { copyFile } from "fs-extra";
-import path from "path";
+import { isFileExist } from "../../../impl/ClicornAPI";
+import { pathJoin } from "../../../impl/Path";
 import { basicHash } from "../../commons/BasicHash";
-import { isFileExist } from "../../commons/FileUtil";
+import { copyFileRW } from "../../commons/FileUtil";
 import { getString } from "../../config/ConfigSupport";
 
 export async function saveModFileAsCache(
@@ -14,11 +14,11 @@ export async function saveModFileAsCache(
     if (cache.trim().length === 0) {
       return;
     }
-    const target = path.resolve(
+    const target = pathJoin(
       cache,
       basicHash(mainId) + "-" + basicHash(artifactId)
     );
-    await copyFile(origin, target);
+    await copyFileRW(origin, target);
   } catch {}
 }
 
@@ -30,9 +30,6 @@ export async function getCachedMod(
   if (cache.trim().length === 0) {
     return false;
   }
-  const p = path.resolve(
-    cache,
-    basicHash(mainId) + "-" + basicHash(artifactId)
-  );
+  const p = pathJoin(cache, basicHash(mainId) + "-" + basicHash(artifactId));
   return (await isFileExist(p)) ? p : false;
 }

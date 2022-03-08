@@ -1,8 +1,9 @@
-import EventEmitter from "events";
+import { isFileExist } from "../../impl/ClicornAPI";
+import { EventEmitter } from "../../impl/EventEmitter";
 import { schedulePromiseTask } from "../../renderer/Schedule";
 import { tr } from "../../renderer/Translator";
 import { expose } from "../boticorn/FTable";
-import { getModifiedDate, isFileExist } from "../commons/FileUtil";
+import { getModifiedDate } from "../commons/FileUtil";
 import { getNumber } from "../config/ConfigSupport";
 import { getAllContainers, getContainer } from "../container/ContainerUtil";
 import {
@@ -16,7 +17,6 @@ import {
   updateRecord,
 } from "../container/ValidateRecord";
 import { DownloadMeta, DownloadStatus } from "./AbstractDownloader";
-import { Concurrent } from "./Concurrent";
 import { MirrorChain } from "./Mirror";
 import { Serial } from "./Serial";
 import { validate } from "./Validate";
@@ -235,7 +235,7 @@ function downloadSingleFile(
     meta.sha1,
     meta.size
   );
-  void Concurrent.getInstance()
+  void Serial.getInstance()
     .downloadFile(du)
     .then((s) => {
       if (s === 1) {
@@ -247,25 +247,10 @@ function downloadSingleFile(
         // Worth retry
         const failed = FAILED_COUNT_MAP.get(meta) || 0;
         if (failed <= 0) {
-          // The last fight! Only once.
-          // FAILED_COUNT_MAP.set(meta, getConfigOptn("tries-per-chunk", 3));
-          addState(tr("ReadyToLaunch.Retry", `Url=${meta.url}`));
-          void Serial.getInstance()
-            .downloadFile(meta) // No Mirror
-            .then((s) => {
-              if (s === 1) {
-                FAILED_COUNT_MAP.delete(meta);
-                addState(tr("ReadyToLaunch.Got", `Url=${meta.url}`));
-                emitter.emit(END_GATE, meta, DownloadStatus.RESOLVED);
-                return;
-              } else {
-                // Simply fatal, retry is meaningless
-                FAILED_COUNT_MAP.delete(meta);
-                addState(tr("ReadyToLaunch.Failed", `Url=${meta.url}`));
-                emitter.emit(END_GATE, meta, DownloadStatus.FATAL);
-                return;
-              }
-            });
+          // Bye!
+          FAILED_COUNT_MAP.delete(meta);
+          addState(tr("ReadyToLaunch.Failed", `Url=${meta.url}`));
+          emitter.emit(END_GATE, meta, DownloadStatus.FATAL);
           return;
         } else {
           FAILED_COUNT_MAP.set(meta, failed - 1); // Again
@@ -304,7 +289,7 @@ export function getWrapperStatus(): WrapperStatus {
 
 const PFF_FLAG = "Downloader.IsPff";
 
-export function getPffFlag(): string {
+function getPffFlag(): string {
   return sessionStorage.getItem(PFF_FLAG) || "0";
 }
 

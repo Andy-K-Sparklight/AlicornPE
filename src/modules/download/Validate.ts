@@ -1,5 +1,9 @@
-import { stat } from "fs-extra";
-import { invokeWorker } from "../../renderer/Schedule";
+import {
+  closeFile,
+  getFileSize,
+  getSHA1,
+  openFile,
+} from "../../impl/ClicornAPI";
 import { getBoolean } from "../config/ConfigSupport";
 export async function validate(
   file: string,
@@ -16,8 +20,8 @@ export async function validate(
   return false;
 }
 
-export async function getHash(f: string): Promise<string> {
-  return String(await invokeWorker("Sha1File", f));
+export function getHash(f: string): Promise<string> {
+  return getSHA1(f);
 }
 
 async function sizeValidate(f: string, size: number): Promise<boolean> {
@@ -25,8 +29,10 @@ async function sizeValidate(f: string, size: number): Promise<boolean> {
     return true;
   }
   try {
-    const s = await stat(f);
-    return s.size === size;
+    const fd = await openFile(f, "rb");
+    const s = await getFileSize(fd);
+    await closeFile(fd);
+    return s === size;
   } catch {
     return false;
   }

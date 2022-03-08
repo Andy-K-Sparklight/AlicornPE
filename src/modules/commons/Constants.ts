@@ -1,4 +1,3 @@
-import path from "path";
 import pkg from "../../../package.json";
 
 // MAINTAINERS ONLY
@@ -9,7 +8,6 @@ export const ALICORN_VERSION_TYPE = "Alicorn";
 export const MOJANG_USER_TYPE = "mojang";
 export const LAUNCHER_NAME = "Alicorn";
 export const LAUNCHER_VERSION = pkg.appVersion;
-export const FILE_SEPARATOR = path.delimiter;
 export const SPACE = " ";
 export const ALICORN_SEPARATOR = "\u2764\u2764";
 export const PROCESS_END_GATE = "END";
@@ -21,10 +19,6 @@ export const ALICORN_ENCRYPTED_DATA_SUFFIX = ".alpp";
 
 export const MOJANG_VERSIONS_MANIFEST =
   "https://launchermeta.mojang.com/mc/game/version_manifest.json";
-
-export const FORGE_MAVEN_ROOT = "https://maven.minecraftforge.net";
-export const FORGE_VERSIONS_MANIFEST =
-  "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
 
 export const FABRIC_META_ROOT = "https://meta.fabricmc.net/v2";
 
@@ -40,11 +34,3 @@ export enum ReleaseType {
 }
 
 export const PLACE_HOLDER = "#//!?PH>>";
-
-export const DOH_CONFIGURE: Record<string, string> = {
-  iQDNS: "https://a.passcloud.xyz/dns-query",
-  Cloudflare: "https://cloudflare-dns.com/dns-query",
-  RubyFish: "https://rubyfish.cn/dns-query",
-  AdGuard: "https://dns.adguard.com/dns-query",
-  OpenDNS: "https://doh.opendns.com/dns-query",
-};
