@@ -842,22 +842,6 @@ async function startBoot(
           window[LAST_LOGS_KEY].shift();
         }
         console.log(d);
-        if (getBoolean("features.detect-lan")) {
-          if (d.toLowerCase().includes("started serving on")) {
-            // "Started serving on 32997"
-            const p = d.split("on").pop();
-            if (p) {
-              const px = parseInt(p.trim());
-              if (!isNaN(px)) {
-                window.dispatchEvent(
-                  new CustomEvent("WorldServing", { detail: px })
-                );
-              }
-            }
-          } else if (d.toLowerCase().includes("stopping server")) {
-            window.dispatchEvent(new CustomEvent("WorldStoppedServing"));
-          }
-        }
       }
     });
   });

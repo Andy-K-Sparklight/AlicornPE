@@ -7,14 +7,12 @@ import {
   Book,
   CameraEnhance,
   CloudDone,
-  CloudSync,
   Code,
   DataArray,
   DataSaverOff,
   DataSaverOn,
   Download,
   EmojiEmotions,
-  Favorite,
   FirstPage,
   Home,
   Inbox,
@@ -235,11 +233,6 @@ export function OptionsPage(): JSX.Element {
             type={ConfigType.STR}
             bindConfig={"startup-page.url"}
           />
-          <InputItem
-            icon={<Favorite />}
-            type={ConfigType.BOOL}
-            bindConfig={"interactive.i-have-a-crush-on-al"}
-          />
         </TabPanel>
         <TabPanel index={1} value={tabValue}>
           <InputItem
@@ -376,11 +369,6 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"download.concurrent.max-tasks"}
           />
           <InputItem
-            type={ConfigType.NUM}
-            icon={<AccessTime />}
-            bindConfig={"download.tls.keep-alive"}
-          />
-          <InputItem
             icon={<SyncAlt />}
             type={ConfigType.RADIO}
             bindConfig={"pff.upgrade-mode"}
@@ -398,18 +386,6 @@ export function OptionsPage(): JSX.Element {
           />
         </TabPanel>
         <TabPanel index={5} value={tabValue}>
-          <InputItem
-            icon={<CloudSync />}
-            type={ConfigType.BOOL}
-            notOn={"darwin"}
-            bindConfig={"updator.use-update"}
-          />
-          <InputItem type={ConfigType.BOOL} bindConfig={"dev.experimental"} />
-          <InputItem
-            type={ConfigType.STR}
-            experimental
-            bindConfig={"updator.url"}
-          />
           <InputItem
             type={ConfigType.BOOL}
             icon={<Code />}

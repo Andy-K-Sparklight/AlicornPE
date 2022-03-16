@@ -6,7 +6,6 @@ import {
   writeFile,
 } from "../../../impl/ClicornAPI";
 import { basicHash } from "../../commons/BasicHash";
-import { getBoolean } from "../../config/ConfigSupport";
 import { MinecraftContainer } from "../../container/MinecraftContainer";
 import { ModArtifact, ModMeta } from "./ModDefine";
 
@@ -37,7 +36,7 @@ export async function loadLockfile(
       }
     } else {
       const fd = await openFile(lockPath, "w");
-      await writeFile(fd,  Buffer.from("{}"));
+      await writeFile(fd, Buffer.from("{}"));
       await closeFile(fd);
       return {};
     }
@@ -88,16 +87,7 @@ export function addToLockfile(
   };
 }
 
-function transformCursePlusPlus(lockfile: Lockfile2): void {
-  if (getBoolean("pff.cursepp2")) {
-    for (const [name, obj] of Object.entries(lockfile)) {
-      if (obj.provider === "Curseforge") {
-        obj.provider = "CursePlusPlus";
-        obj.id = obj.slug;
-        const newName = basicHash(obj.id) + "#" + basicHash(obj.id);
-        delete lockfile[name];
-        lockfile[newName] = obj;
-      }
-    }
-  }
+// PlaceHolder
+function transformCursePlusPlus(_lockfile: Lockfile2): void {
+  return;
 }
