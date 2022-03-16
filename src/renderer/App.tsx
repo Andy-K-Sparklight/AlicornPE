@@ -12,7 +12,6 @@ import {
   Menu,
   PowerSettingsNew,
   Settings,
-  ShowChart,
   ViewModule,
 } from "@mui/icons-material";
 import {
@@ -38,17 +37,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Route } from "react-router-dom";
 import { expose } from "../modules/boticorn/FTable";
 import { safeGet } from "../modules/commons/Null";
-import {
-  getBoolean,
-  getString,
-  saveConfig,
-} from "../modules/config/ConfigSupport";
+import { getString, saveConfig } from "../modules/config/ConfigSupport";
 import { saveGDT } from "../modules/container/ContainerUtil";
 import { saveVF } from "../modules/container/ValidateRecord";
 import { saveJDT } from "../modules/java/JavaInfo";
 import { ContainerManager } from "./ContainerManager";
 import { CrashReportDisplay } from "./CrashReportDisplay";
-import { waitInstDone } from "./FirstRunSetup";
 import {
   canGoBack,
   CHANGE_PAGE_WARN,
@@ -58,14 +52,12 @@ import {
   triggerSetPage,
 } from "./GoTo";
 import { InstallCore } from "./InstallCore";
-import { Instruction, isInstBusy, startInst } from "./Instruction";
 import { JavaSelector } from "./JavaSelector";
 import { LaunchPad } from "./LaunchPad";
 import { YNDialog2 } from "./OperatingHint";
 import { OptionsPage } from "./Options";
 import { PffFront } from "./PffFront";
 import { ReadyToLaunch } from "./ReadyToLaunch";
-import { saveStatistics, Statistics } from "./Statistics";
 import { AlicornTheme } from "./Stylex";
 import { TheEndingOfTheEnd } from "./TheEndingOfTheEnd";
 import { tr } from "./Translator";
@@ -121,9 +113,6 @@ export function App(): JSX.Element {
   const [succ, setSucc] = useState("");
   const [refreshBit, setRefreshBit] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const [openTips, setOpenTips] = useState(
-    getBoolean("features.tips-of-today")
-  );
   const sessionID = useRef(0);
   const clearSnacks = () => {
     setInfoOpen(false);
@@ -138,22 +127,6 @@ export function App(): JSX.Element {
       triggerSetPage(getString("startup-page.name", "Welcome"));
     }
   }, [window.location.hash]);
-  useEffect(() => {
-    if (getBoolean("interactive.assistant?")) {
-      if (page.length > 0 && !isInstBusy()) {
-        if (localStorage.getItem("Instruction.Read." + page) !== "1") {
-          const k = `Instruction.${page}.0`;
-          if (tr(k) !== k) {
-            startInst(page);
-            void (async (p) => {
-              await waitInstDone();
-              localStorage.setItem("Instruction.Read." + p, "1");
-            })(page);
-          }
-        }
-      }
-    }
-  }, [page]);
   useEffect(() => {
     const fun = (_e: Event) => {
       setRefreshBit(!refreshBit);
@@ -428,7 +401,6 @@ export function App(): JSX.Element {
           // @ts-ignore
           window.clearLogScreen();
         })()}
-        <Instruction />
         <Container>
           <Route path={"/LaunchPad/:server?"} component={LaunchPad} />
           <Route path={"/InstallCore"} component={InstallCore} />
@@ -457,7 +429,6 @@ export function App(): JSX.Element {
           <Route path={"/Welcome"} component={Welcome} />
           <Route path={"/UtilitiesIndex"} component={UtilitiesIndex} />
           <Route path={"/Utilities/PffVisual"} component={PffVisual} />
-          <Route path={"/Statistics"} component={Statistics} />
           <Route path={"/TheEndingOfTheEnd"} component={TheEndingOfTheEnd} />
         </Container>
       </Box>
@@ -569,7 +540,6 @@ const PAGES_ICONS_MAP: Record<string, JSX.Element> = {
   JavaSelector: <ViewModule />,
   AccountManager: <AccountCircle />,
   UtilitiesIndex: <Handyman />,
-  Statistics: <ShowChart />,
   Options: <Settings />,
   Version: <Info />,
   TheEndingOfTheEnd: <ImportContacts />,
@@ -630,7 +600,6 @@ export async function intervalSaveData(): Promise<void> {
   await saveGDT();
   await saveJDT();
   await saveVF();
-  saveStatistics();
 }
 
 function BetaTag(): JSX.Element {

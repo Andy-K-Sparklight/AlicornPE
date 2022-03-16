@@ -33,11 +33,14 @@ export declare function getTotalMemory(): Promise<number>;
 export declare function chdir(pt: string): Promise<void>;
 
 // Net
+// Throw: Network Error
+// True: OK
+// False: Status Code Error
 export declare function downloadFile(
   url: string,
   pt: string,
   timeout: number
-): Promise<void>;
+): Promise<boolean>;
 
 interface CResponse {
   status: number;

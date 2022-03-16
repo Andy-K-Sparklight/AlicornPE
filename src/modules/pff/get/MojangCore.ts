@@ -75,8 +75,11 @@ export async function downloadProfile(
       container.getVersionRoot(version),
       version + ".json"
     );
+    console.log("Profile URL: " + url);
     const m = new DownloadMeta(url, profilePath);
+    console.log("Downloading profile begin!");
     await wrappedDownloadFile(m, true);
+    console.log("Downloading client!");
     // Ensure client
     const p = await loadProfile(version, container);
     await ensureClient(p);

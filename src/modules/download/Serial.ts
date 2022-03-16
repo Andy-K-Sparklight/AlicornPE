@@ -26,12 +26,15 @@ export class Serial extends AbstractDownloader {
         try {
           // Ensure directory
           await ensureDir(pathDirname(meta.savePath));
-
-          await downloadFile(
-            meta.url,
-            meta.savePath,
-            noTimeout ? 0 : getConfigOptn("timeout", 3000)
-          );
+          if (
+            !(await downloadFile(
+              meta.url,
+              meta.savePath,
+              noTimeout ? 0 : getConfigOptn("timeout", 3000)
+            ))
+          ) {
+            return DownloadStatus.RETRY;
+          }
 
           if (meta.sha1 === "" || getBoolean("download.skip-validate")) {
             return DownloadStatus.RESOLVED;

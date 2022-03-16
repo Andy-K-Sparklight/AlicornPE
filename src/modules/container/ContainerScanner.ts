@@ -25,7 +25,7 @@ export async function scanCoresIn(
             resolve();
             return;
           }
-          void isValidCore(pathJoin(cRoot, v)).then((i) => {
+          void isValidCore(pathJoin(cRoot, v, v + ".json")).then((i) => {
             if (i) {
               tArr.push(v);
             }
@@ -35,7 +35,8 @@ export async function scanCoresIn(
       })
     );
     return tArr;
-  } catch {
+  } catch (e) {
+    console.log(e);
     return [];
   }
 }

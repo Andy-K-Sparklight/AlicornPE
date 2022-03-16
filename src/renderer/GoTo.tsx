@@ -1,18 +1,15 @@
+import { cSessionStorage } from "../impl/BrowserFix";
 import { expose } from "../modules/boticorn/FTable";
 import { getBoolean, saveAndReloadMain } from "../modules/config/ConfigSupport";
 import { loadMirror } from "../modules/download/Mirror";
 import { intervalSaveData } from "./App";
 import { setContainerListDirty } from "./ContainerManager";
-import { isInstBusy } from "./Instruction";
 
 expose({ jumpTo, triggerSetPage });
 
 const PAGES_HISTORY: string[] = [];
 const TITLE_HISTORY: string[] = [];
 export function jumpTo(target: string, keepHistory = true): void {
-  if (isInstBusy()) {
-    return;
-  }
   // @ts-ignore
   if (window[CHANGE_PAGE_WARN]) {
     window.dispatchEvent(
@@ -46,8 +43,8 @@ export function jumpTo(target: string, keepHistory = true): void {
 }
 
 function ifLeavingConfigThenReload(): void {
-  if (sessionStorage.getItem("Options.Reload") === "1") {
-    sessionStorage.removeItem("Options.Reload");
+  if (cSessionStorage.getItem("Options.Reload") === "1") {
+    cSessionStorage.removeItem("Options.Reload");
     intervalSaveData()
       .then(() => {})
       .catch(() => {});
@@ -58,9 +55,6 @@ function ifLeavingConfigThenReload(): void {
 }
 
 export function triggerSetPage(page: string, _keepHistory = true): void {
-  if (isInstBusy()) {
-    return;
-  }
   // @ts-ignore
   if (window[CHANGE_PAGE_WARN]) {
     window.dispatchEvent(

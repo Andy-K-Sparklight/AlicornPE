@@ -86,18 +86,19 @@ export function spawnProc(cmd) {
 }
 
 export function getFreeMemory() {
-  return window._getFreeMemory(pc);
+  return window._getFreeMemory();
 }
 export function getTotalMemory() {
-  return window._getTotalMemory(pc);
+  return window._getTotalMemory();
 }
 export function chdir(pt) {
   return window._chdir(pt);
 }
 
 // Net
-export function downloadFile(url, pt, timeout) {
-  return window._downloadFile(url, pt, timeout);
+export async function downloadFile(url, pt, timeout) {
+  const c = await window._downloadFile(url, pt, timeout);
+  return c === "OK";
 }
 
 export async function netGet(url, hd, timeout) {

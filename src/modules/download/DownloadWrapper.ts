@@ -1,3 +1,4 @@
+import { cSessionStorage } from "../../impl/BrowserFix";
 import { isFileExist } from "../../impl/ClicornAPI";
 import { EventEmitter } from "../../impl/EventEmitter";
 import { schedulePromiseTask } from "../../renderer/Schedule";
@@ -185,6 +186,7 @@ function _wrappedDownloadFile(
         // addState(tr("ReadyToLaunch.Validated", `Url=${meta.url}`)); Huge outputs!
         resolve(DownloadStatus.RESOLVED);
       } else {
+        console.log(`Target ${meta.url} not exist, session created.`);
         FAILED_COUNT_MAP.set(meta, getConfigOptn("tries-per-chunk", 3));
         const pl = WAITING_RESOLVES_MAP.get(meta.savePath);
         if (pl) {
@@ -192,6 +194,7 @@ function _wrappedDownloadFile(
           scheduleNextTask();
           return;
         }
+        console.log("Task not found, creating a new task.");
         WAITING_RESOLVES_MAP.set(meta.savePath, [resolve]); // Start it
         PENDING_TASKS.push(meta);
         const chain = disableMirror
@@ -210,7 +213,9 @@ function scheduleNextTask(): void {
   const CURRENT_MAX = getConfigOptn("max-tasks", 100);
   while (RUNNING_TASKS.size < CURRENT_MAX && PENDING_TASKS.length > 0) {
     const tsk = PENDING_TASKS.pop();
+
     if (tsk !== undefined) {
+      console.log("Taking task " + tsk.url);
       RUNNING_TASKS.add(tsk);
       addState(tr("ReadyToLaunch.Getting", `Url=${tsk.url}`));
       downloadSingleFile(
@@ -229,6 +234,7 @@ function downloadSingleFile(
   emitter: EventEmitter,
   chain: MirrorChain
 ): void {
+  console.log("Executing task " + meta.url + " -> " + chain.mirror());
   const du = new DownloadMeta(
     chain.mirror(),
     meta.savePath,
@@ -244,6 +250,7 @@ function downloadSingleFile(
         emitter.emit(END_GATE, meta, DownloadStatus.RESOLVED);
         return;
       } else if (s === 0 || s === -3) {
+        console.log(`Task ${meta.url} failed! s=${s}`);
         // Worth retry
         const failed = FAILED_COUNT_MAP.get(meta) || 0;
         if (failed <= 0) {
@@ -253,17 +260,20 @@ function downloadSingleFile(
           emitter.emit(END_GATE, meta, DownloadStatus.FATAL);
           return;
         } else {
+          console.log(`Retrying ${meta.url}, failed=${failed}`);
           FAILED_COUNT_MAP.set(meta, failed - 1); // Again
           const mChain = MIRROR_CHAIN.get(meta) || new MirrorChain(meta.url);
           if (s === 0) {
             // Not Timeout
             mChain.markBad();
             mChain.next();
+            console.log(`Switched mirror to ${mChain.mirror()}`);
           }
           addState(tr("ReadyToLaunch.Retry", `Url=${mChain.mirror()}`));
           downloadSingleFile(meta, emitter, mChain);
         }
       } else {
+        console.log(`Task ${meta.url} failed! s=${s}`);
         // Do not retry
         FAILED_COUNT_MAP.delete(meta);
         addState(tr("ReadyToLaunch.Failed", `Url=${meta.url}`));
@@ -290,7 +300,7 @@ export function getWrapperStatus(): WrapperStatus {
 const PFF_FLAG = "Downloader.IsPff";
 
 function getPffFlag(): string {
-  return sessionStorage.getItem(PFF_FLAG) || "0";
+  return cSessionStorage.getItem(PFF_FLAG) || "0";
 }
 
 export function getConfigOptn(name: string, def: number): number {

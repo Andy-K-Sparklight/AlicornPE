@@ -1,6 +1,8 @@
 const path = require("path");
 const { ContextReplacementPlugin } = require("webpack");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const Html = require("html-webpack-plugin");
+const Inline = require("html-inline-script-webpack-plugin");
 
 module.exports = {
   entry: {
@@ -29,11 +31,6 @@ module.exports = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
-    alias: {
-      react: "preact/compat",
-      "react-dom/test-utils": "preact/test-utils",
-      "react-dom": "preact/compat",
-    },
   },
   plugins: [
     new ContextReplacementPlugin(/keyv/),
@@ -45,6 +42,11 @@ module.exports = {
         },
       ],
     }),
+    new Html({
+      filename: "Renderer.html",
+      template: "resources/build/Renderer.html",
+    }),
+    new Inline(),
   ],
   devtool: "cheap-source-map",
   mode: "development",

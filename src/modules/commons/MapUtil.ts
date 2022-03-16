@@ -4,7 +4,8 @@ import { ALICORN_SEPARATOR } from "./Constants";
 // MapUtil will only be used in our code, not for plugins or user data
 // In that case, we shall use JSON instead
 export function parseMap<T = boolean | string | number>(
-  str: string
+  str: string,
+  customSep = ALICORN_SEPARATOR
 ): Map<string, T> {
   const entries = str.trim().split("\n"); // Better compatibility
   const freshMap: Map<string, T> = new Map();
@@ -16,7 +17,7 @@ export function parseMap<T = boolean | string | number>(
       if (e.startsWith("#")) {
         continue;
       }
-      const entTuple = e.trim().split(ALICORN_SEPARATOR);
+      const entTuple = e.trim().split(customSep);
       if (entTuple.length < 2) {
         continue;
       }
@@ -44,10 +45,13 @@ function manualParse(source: string): boolean | number | string {
   return source;
 }
 
-export function buildMap(map: Map<string, unknown>): string {
+export function buildMap(
+  map: Map<string, unknown>,
+  customSep = ALICORN_SEPARATOR
+): string {
   const stringGroup = [];
   for (const [k, v] of map.entries()) {
-    stringGroup.push(k + ALICORN_SEPARATOR + String(v));
+    stringGroup.push(k + customSep + String(v));
   }
   return stringGroup.join("\n");
 }

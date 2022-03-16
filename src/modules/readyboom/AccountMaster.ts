@@ -1,3 +1,4 @@
+import { cLocalStorage } from "../../impl/BrowserFix";
 import {
   ACCOUNT_EXPIRES_KEY,
   ACCOUNT_LAST_REFRESHED_KEY,
@@ -44,21 +45,21 @@ export function waitMSAccountReady(): Promise<boolean> {
 
 function isMSAccountValid(): boolean {
   const refreshedAt = new Date(
-    localStorage.getItem(ACCOUNT_LAST_REFRESHED_KEY) || 0
+    cLocalStorage.getItem(ACCOUNT_LAST_REFRESHED_KEY) || 0
   );
   const expires =
-    parseInt(localStorage.getItem(ACCOUNT_EXPIRES_KEY) || "0") * 1000; // s to ms
+    parseInt(cLocalStorage.getItem(ACCOUNT_EXPIRES_KEY) || "0") * 1000; // s to ms
   const validTo = new Date(refreshedAt.getTime() + expires);
   return new Date().getTime() < validTo.getTime();
 }
 
 async function keepMSAccountLowPriority(): Promise<boolean> {
   const refreshedAt = new Date(
-    localStorage.getItem(ACCOUNT_LAST_REFRESHED_KEY) || 0
+    cLocalStorage.getItem(ACCOUNT_LAST_REFRESHED_KEY) || 0
   );
 
   const expires =
-    parseInt(localStorage.getItem(ACCOUNT_EXPIRES_KEY) || "0") * 1000; // s to ms
+    parseInt(cLocalStorage.getItem(ACCOUNT_EXPIRES_KEY) || "0") * 1000; // s to ms
   const validTo = new Date(refreshedAt.getTime() + expires);
   if (new Date().getTime() < validTo.getTime()) {
     return true;

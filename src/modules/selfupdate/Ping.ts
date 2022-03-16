@@ -1,5 +1,6 @@
 // The data sent has already been hash encoded and is almost irreversible.
 
+import { cLocalStorage } from "../../impl/BrowserFix";
 import { netGet } from "../../impl/ClicornAPI";
 import { uniqueHash } from "../commons/BasicHash";
 import { getBoolean } from "../config/ConfigSupport";
@@ -13,7 +14,7 @@ export async function todayPing(): Promise<void> {
     return;
   }
   const d0 = getDay();
-  const o = localStorage.getItem(PING_KEY);
+  const o = cLocalStorage.getItem(PING_KEY);
   if (d0 !== o) {
     try {
       const r = await netGet(
@@ -24,7 +25,7 @@ export async function todayPing(): Promise<void> {
         0
       );
       if (r.status >= 200 && r.status < 300) {
-        localStorage.setItem(PING_KEY, getDay());
+        cLocalStorage.setItem(PING_KEY, getDay());
         console.log("Ping success!");
       } else {
         console.log("Ping failed, try again next time...");

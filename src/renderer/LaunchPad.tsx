@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { cLocalStorage } from "../impl/BrowserFix";
 import { remove } from "../impl/ClicornAPI";
 import { basicHash } from "../modules/commons/BasicHash";
 import { scanCoresInAllMountedContainers } from "../modules/container/ContainerScanner";
@@ -31,7 +32,6 @@ import { Icons } from "./Icons";
 import { submitWarn } from "./Message";
 import { YNDialog2 } from "./OperatingHint";
 import { isBgDark } from "./Renderer";
-import { addStatistics } from "./Statistics";
 import { useCardStyles, usePadStyles } from "./Stylex";
 import { tr } from "./Translator";
 
@@ -72,10 +72,10 @@ function CoresDisplay(props: { server?: string }): JSX.Element {
   const ignoreCorrupted = useRef(true);
   type Sorting = "LH" | "HL" | "USE" | "TIME";
   const [sorting, _setSorting] = useState<Sorting>(
-    (window.localStorage.getItem("LaunchPad.Sorting") || "USE") as Sorting
+    (cLocalStorage.getItem("LaunchPad.Sorting") || "USE") as Sorting
   );
   const setSorting = (a: Sorting) => {
-    window.localStorage.setItem("LaunchPad.Sorting", a);
+    cLocalStorage.setItem("LaunchPad.Sorting", a);
     _setSorting(a);
   };
 
@@ -328,7 +328,6 @@ function SingleCoreDisplay(props: {
                       color={"inherit"}
                       className={classes.operateButton}
                       onClick={async (e) => {
-                        addStatistics("Click");
                         e.stopPropagation();
                         if (
                           await isStillNeeded(
@@ -360,7 +359,6 @@ function SingleCoreDisplay(props: {
                         markUsed(hash, 0);
                         markTime(hash, true);
                         props.refresh();
-                        addStatistics("Click");
                         e.stopPropagation();
                       }}
                     >
@@ -397,7 +395,6 @@ function SingleCoreDisplay(props: {
                                   }`
                                 );
                                 triggerSetPage("PffFront");
-                                addStatistics("Click");
                                 e.stopPropagation();
                               }
                             : undefined
@@ -451,7 +448,6 @@ function SingleCoreDisplay(props: {
                             }`
                           );
                           triggerSetPage("PffFront");
-                          addStatistics("Click");
                           e.stopPropagation();
                         }
                       : undefined
@@ -531,7 +527,7 @@ function SingleCoreDisplay(props: {
               } finally {
                 markUsed(hash, 0);
                 markTime(hash, true);
-                localStorage.removeItem(
+                cLocalStorage.removeItem(
                   "ReadyToLaunch.AccountConfigured" + hash
                 );
                 props.refresh();
@@ -557,30 +553,30 @@ const PIN_NUMBER_KEY = "PinIndex.";
 const PIN_TIME_KEY = "PinTime.";
 
 function getMarkTime(hash: string): Date {
-  return new Date(localStorage.getItem(PIN_TIME_KEY + hash) || "0");
+  return new Date(cLocalStorage.getItem(PIN_TIME_KEY + hash) || "0");
 }
 
 function markTime(hash: string, clear = false): void {
   if (clear) {
-    localStorage.removeItem(PIN_TIME_KEY + hash);
+    cLocalStorage.removeItem(PIN_TIME_KEY + hash);
     return;
   }
-  localStorage.setItem(PIN_TIME_KEY + hash, new Date().toString());
+  cLocalStorage.setItem(PIN_TIME_KEY + hash, new Date().toString());
 }
 
 function getUsed(hash: string): number {
-  return parseInt(localStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
+  return parseInt(cLocalStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
 }
 
 function markUsed(hash: string, set?: number): void {
   if (set !== undefined) {
-    localStorage.setItem(PIN_NUMBER_KEY + hash, set.toString());
+    cLocalStorage.setItem(PIN_NUMBER_KEY + hash, set.toString());
     return;
   }
   let origin =
-    parseInt(localStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
+    parseInt(cLocalStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
   origin++;
-  localStorage.setItem(PIN_NUMBER_KEY + hash, origin.toString());
+  cLocalStorage.setItem(PIN_NUMBER_KEY + hash, origin.toString());
 }
 
 function getDescriptionFor(type: string): string {

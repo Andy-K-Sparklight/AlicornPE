@@ -1,3 +1,4 @@
+import { cLocalStorage } from "../../impl/BrowserFix";
 import { netGet, netPost, openExternal } from "../../impl/ClicornAPI";
 import { isNull, safeGet } from "../commons/Null";
 import { decrypt2, encrypt2 } from "../security/Encrypt";
@@ -41,14 +42,14 @@ export class MicrosoftAccount extends Account {
   constructor(accountName: string) {
     super(accountName, AccountType.MICROSOFT);
     this.lastUsedUsername =
-      localStorage.getItem(MS_LAST_USED_USERNAME_KEY) || "";
-    this.lastUsedUUID = localStorage.getItem(MS_LAST_USED_UUID_KEY) || "";
+      cLocalStorage.getItem(MS_LAST_USED_USERNAME_KEY) || "";
+    this.lastUsedUUID = cLocalStorage.getItem(MS_LAST_USED_UUID_KEY) || "";
     this.lastUsedAccessToken = decrypt2(
-      localStorage.getItem(MS_LAST_USED_ACTOKEN_KEY) || ""
+      cLocalStorage.getItem(MS_LAST_USED_ACTOKEN_KEY) || ""
     );
-    this.lastUsedXuid = localStorage.getItem(MS_LAST_USED_XUID_KEY) || "";
+    this.lastUsedXuid = cLocalStorage.getItem(MS_LAST_USED_XUID_KEY) || "";
     this.refreshToken = decrypt2(
-      localStorage.getItem(MS_LAST_USED_REFRESH_KEY) || ""
+      cLocalStorage.getItem(MS_LAST_USED_REFRESH_KEY) || ""
     );
   }
 
@@ -91,7 +92,7 @@ export class MicrosoftAccount extends Account {
       this.lastUsedUsername = String(r5.name);
       this.lastUsedUUID = String(r5.uuid);
       console.log("Flush OK!");
-      localStorage.setItem(
+      cLocalStorage.setItem(
         ACCOUNT_LAST_REFRESHED_KEY,
         new Date().toISOString()
       );
@@ -121,11 +122,13 @@ export class MicrosoftAccount extends Account {
     try {
       console.log("Getting code...");
       const code = await browserGetCode(quiet);
+      console.log("CODE: " + code);
       if (code.trim().length === 0) {
         return false;
       }
       console.log("Code -> Token");
       const r = await getTokenByCode(code);
+      console.log("SUCC: " + r.success);
       if (!r.success) {
         return false;
       }
@@ -159,31 +162,28 @@ export class MicrosoftAccount extends Account {
 }
 
 function saveRefreshToken(v: string): void {
-  localStorage.setItem(MS_LAST_USED_REFRESH_KEY, encrypt2(v));
+  cLocalStorage.setItem(MS_LAST_USED_REFRESH_KEY, encrypt2(v));
 }
 
 function saveUUID(v: string): void {
-  localStorage.setItem(MS_LAST_USED_UUID_KEY, v);
+  cLocalStorage.setItem(MS_LAST_USED_UUID_KEY, v);
 }
 
 function saveXuid(v: string): void {
-  localStorage.setItem(MS_LAST_USED_XUID_KEY, v);
+  cLocalStorage.setItem(MS_LAST_USED_XUID_KEY, v);
 }
 
 function saveUserName(v: string): void {
-  localStorage.setItem(MS_LAST_USED_USERNAME_KEY, v);
+  cLocalStorage.setItem(MS_LAST_USED_USERNAME_KEY, v);
 }
 
 function saveAccessToken(v: string): void {
-  localStorage.setItem(MS_LAST_USED_ACTOKEN_KEY, encrypt2(v));
+  cLocalStorage.setItem(MS_LAST_USED_ACTOKEN_KEY, encrypt2(v));
 }
 
 // User -> Code
 // Only in remote!
 async function browserGetCode(quiet = false): Promise<string> {
-  const LOGIN_WINDOW_KEY =
-    window.localStorage.getItem("MS.LoginWindowKey") ||
-    "alicorn_ms_login_initial";
   console.log("External opening login window...");
   await openExternal(
     "https://login.live.com/oauth20_authorize.srf?client_id=00000000402b5328&response_type=code&scope=service%3A%3Auser.auth.xboxlive.com%3A%3AMBI_SSL&redirect_uri=https%3A%2F%2Flogin.live.com%2Foauth20_desktop.srf"
@@ -260,7 +260,7 @@ async function tokenRequest(
     // @ts-ignore
     const expires = parseInt(safeGet(ret, ["expires_in"], null));
     if (!isNaN(expires)) {
-      localStorage.setItem(
+      cLocalStorage.setItem(
         ACCOUNT_EXPIRES_KEY,
         (expires - 3600).toString() // SAFE
       );

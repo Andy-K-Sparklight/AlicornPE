@@ -2,6 +2,7 @@ import { Box, Typography } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import React, { useState } from "react";
 import pkg from "../../package.json";
+import { cSessionStorage } from "../impl/BrowserFix";
 import { AlicornTheme } from "./Stylex";
 import { tr } from "./Translator";
 const modeList = ["Copyright", "Privacy", "Credit"];
@@ -14,7 +15,7 @@ export function VersionView(): JSX.Element {
       color: theme.palette.primary.main,
     },
     text: {
-      fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+      fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
     },
   }))();
   return (

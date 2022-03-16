@@ -6,7 +6,6 @@ import {
   Bolt,
   Book,
   CameraEnhance,
-  Chat,
   CloudDone,
   CloudSync,
   Code,
@@ -56,6 +55,7 @@ import {
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import React, { useRef, useState } from "react";
+import { cLocalStorage, cSessionStorage } from "../impl/BrowserFix";
 import { getOsType } from "../impl/ClicornAPI";
 import {
   get,
@@ -87,7 +87,7 @@ export function OptionsPage(): JSX.Element {
   const [tabValue, setTabValue] = useState(0);
   const classes = makeStyles((theme: AlicornTheme) => ({
     head: {
-      fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+      fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
       color: theme.palette.secondary.main,
     },
   }))();
@@ -179,12 +179,6 @@ export function OptionsPage(): JSX.Element {
             bindConfig={"assistant"}
             reload
             choices={ALL_ASSISTANTS}
-          />
-          <InputItem
-            icon={<Chat />}
-            type={ConfigType.BOOL}
-            bindConfig={"interactive.assistant?"}
-            reload
           />
           <InputItem
             icon={<CloudDone />}
@@ -433,11 +427,11 @@ export function OptionsPage(): JSX.Element {
 }
 
 export function hasEdited(conf: string): boolean {
-  return localStorage.getItem("Edited." + conf) === "1";
+  return cLocalStorage.getItem("Edited." + conf) === "1";
 }
 
 function markEdited(conf: string): void {
-  localStorage.setItem("Edited." + conf, "1");
+  cLocalStorage.setItem("Edited." + conf, "1");
 }
 
 function InputItem(props: {
@@ -461,7 +455,7 @@ function InputItem(props: {
       get(props.bindConfig, undefined) !== originVal.current &&
       props.reload
     ) {
-      sessionStorage.setItem("Options.Reload", "1");
+      cSessionStorage.setItem("Options.Reload", "1");
     }
     if (props.onChange) {
       props.onChange();

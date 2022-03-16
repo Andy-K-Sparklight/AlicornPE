@@ -24,7 +24,6 @@ import {
 } from "../modules/java/JavaInfo";
 import { whereJava } from "../modules/java/WhereJava";
 import { setChangePageWarn } from "./GoTo";
-import { ShiftEle } from "./Instruction";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
@@ -156,29 +155,27 @@ export function JavaSelector(): JSX.Element {
             {tr("JavaSelector.SelectJava")}
           </InputLabel>
 
-          <ShiftEle name={"JavaSelectorSelect"} bgfill>
-            <Select
-              label={tr("JavaSelector.SelectJava")}
-              variant={"outlined"}
-              labelId={"Select-JRE"}
-              color={"primary"}
-              fullWidth
-              onChange={(e) => {
-                const sj = String(e.target.value);
-                setCurrentJava(sj);
-                setDefaultJavaHome(sj);
-              }}
-              value={currentJava || javaList[0] || ""}
-            >
-              {javaList.map((j) => {
-                return (
-                  <MenuItem key={j} value={j}>
-                    {j}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </ShiftEle>
+          <Select
+            label={tr("JavaSelector.SelectJava")}
+            variant={"outlined"}
+            labelId={"Select-JRE"}
+            color={"primary"}
+            fullWidth
+            onChange={(e) => {
+              const sj = String(e.target.value);
+              setCurrentJava(sj);
+              setDefaultJavaHome(sj);
+            }}
+            value={currentJava || javaList[0] || ""}
+          >
+            {javaList.map((j) => {
+              return (
+                <MenuItem key={j} value={j}>
+                  {j}
+                </MenuItem>
+              );
+            })}
+          </Select>
         </FormControl>
         <br />
         <br />
@@ -196,9 +193,7 @@ export function JavaSelector(): JSX.Element {
               setLoaded(false);
             }}
           >
-            <ShiftEle name={"JavaSelectorSelect"} bgfill>
-              <Refresh />
-            </ShiftEle>
+            <Refresh />
           </IconButton>
         </Tooltip>
         <br />

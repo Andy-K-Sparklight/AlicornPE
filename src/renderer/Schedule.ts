@@ -7,6 +7,12 @@ export function schedulePromiseTask<T>(
   fn: () => Promise<T> | T,
   timeout?: number
 ): Promise<T> {
+  return Promise.resolve(fn());
+}
+export function _schedulePromiseTask<T>(
+  fn: () => Promise<T> | T,
+  timeout?: number
+): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     window.requestIdleCallback(
       () => {

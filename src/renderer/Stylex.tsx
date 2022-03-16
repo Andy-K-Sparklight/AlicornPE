@@ -1,4 +1,5 @@
 import { makeStyles } from "@mui/styles";
+import { cSessionStorage } from "../impl/BrowserFix";
 import { isBgDark } from "./Renderer";
 
 export interface AlicornTheme {
@@ -19,7 +20,7 @@ export interface AlicornTheme {
 
 export const useCardStyles = makeStyles((theme: AlicornTheme) => ({
   text: {
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
     color: theme.palette.secondary.light,
   },
   text2: { fontSize: "medium", color: theme.palette.secondary.light },
@@ -47,7 +48,7 @@ export const usePadStyles = makeStyles((theme: AlicornTheme) => ({
     color: theme.palette.primary.main,
   },
   smallText: {
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
   },
 }));
 export const useInputStyles = makeStyles((theme: AlicornTheme) => ({
@@ -95,7 +96,7 @@ export const useFormStyles = makeStyles((theme: AlicornTheme) => ({
     marginTop: theme.spacing(1),
   },
   instr: {
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
     color: theme.palette.secondary.main,
   },
 }));
@@ -137,7 +138,7 @@ export const useTextStyles = makeStyles((theme: AlicornTheme) => ({
   },
   secondText: {
     color: theme.palette.secondary.main,
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
   },
   mediumText: {
     color: theme.palette.secondary.main,
@@ -145,7 +146,7 @@ export const useTextStyles = makeStyles((theme: AlicornTheme) => ({
   },
   link: {
     color: theme.palette.primary.main,
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
   },
   thirdTextRaw: {
     color: theme.palette.primary.main,

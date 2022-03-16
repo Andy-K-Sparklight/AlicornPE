@@ -1,3 +1,4 @@
+import { cLocalStorage } from "../../impl/BrowserFix";
 import { basicHash } from "../commons/BasicHash";
 import { getBoolean, getNumber } from "../config/ConfigSupport";
 import { scanCoresInAllMountedContainers } from "../container/ContainerScanner";
@@ -49,7 +50,7 @@ export function waitProfileReady(
 }
 
 export function setLastUsed(container: string, id: string) {
-  localStorage.setItem(LAST_USED_KEY, container + "/" + id);
+  cLocalStorage.setItem(LAST_USED_KEY, container + "/" + id);
 }
 
 async function prepareProfile(
@@ -111,7 +112,7 @@ async function scanAndActivateHotProfiles(): Promise<void> {
     os.push(b);
     c++;
   }
-  const lastCoreUsed = localStorage.getItem(LAST_USED_KEY);
+  const lastCoreUsed = cLocalStorage.getItem(LAST_USED_KEY);
   if (lastCoreUsed) {
     const [ct, id] = lastCoreUsed.split("/");
     const a = os.map((d) => {
@@ -156,7 +157,7 @@ async function scanAndActivateHotProfiles(): Promise<void> {
 
 const PIN_NUMBER_KEY = "PinIndex.";
 function getUsed(hash: string): number {
-  return parseInt(localStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
+  return parseInt(cLocalStorage.getItem(PIN_NUMBER_KEY + hash) || "0") || 0;
 }
 
 export function setupHotProfilesService(): void {

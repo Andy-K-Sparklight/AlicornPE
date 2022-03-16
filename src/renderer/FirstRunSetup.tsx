@@ -1,3 +1,4 @@
+import { cLocalStorage } from "../impl/BrowserFix";
 import { getUserHome, netGet } from "../impl/ClicornAPI";
 import { pathJoin } from "../impl/Path";
 import { alterPath } from "../modules/commons/FileUtil";
@@ -11,22 +12,8 @@ import {
   setDefaultJavaHome,
 } from "../modules/java/JavaInfo";
 import { whereJava } from "../modules/java/WhereJava";
-import { isInstBusy, startInst } from "./Instruction";
 import { submitInfo } from "./Message";
 import { tr } from "./Translator";
-export function waitInstDone(): Promise<void> {
-  return new Promise<void>((res) => {
-    if (!isInstBusy()) {
-      res();
-      return;
-    }
-    const fun = () => {
-      window.removeEventListener("InstructionEnd", fun);
-      res();
-    };
-    window.addEventListener("InstructionEnd", fun);
-  });
-}
 
 async function waitJavaSearch(): Promise<boolean> {
   const r = await whereJava(true, true);
@@ -60,8 +47,6 @@ async function setupFirstJavaCheckAndCheckToGo(): Promise<void> {
   void (async () => {
     s = await waitJavaSearch();
   })();
-  await waitInstDone();
-  startInst("JavaOK"); // Not really...
 
   // Delegate this task
   void whereJava(true)
@@ -80,7 +65,6 @@ async function setupFirstJavaCheckAndCheckToGo(): Promise<void> {
       submitInfo(tr("FirstRun.JavaConfigured"));
     })
     .catch(() => {});
-  await waitInstDone();
 }
 
 async function configureDefaultDirs(): Promise<void> {
@@ -88,11 +72,11 @@ async function configureDefaultDirs(): Promise<void> {
   const cx = await alterPath(pathJoin(getUserHome(), "alicorn", "asc-cache"));
   if (pff.length > 0) {
     set("pff.cache-root", pff);
-    localStorage.setItem("Edited.pff.cache-root", "1");
+    cLocalStorage.setItem("Edited.pff.cache-root", "1");
   }
   if (cx.length > 0) {
     set("cx.shared-root", cx);
-    localStorage.setItem("Edited.cx.shared-root", "1");
+    cLocalStorage.setItem("Edited.cx.shared-root", "1");
   }
 }
 

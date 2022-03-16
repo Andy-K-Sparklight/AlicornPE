@@ -7,7 +7,7 @@ import {
   FlightTakeoff,
   Person,
   SportsScore,
-  ViewModule
+  ViewModule,
 } from "@mui/icons-material";
 import {
   Box,
@@ -36,48 +36,40 @@ import {
   TextField,
   ThemeProvider,
   Tooltip,
-  Typography
+  Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { cLocalStorage, cSessionStorage } from "../impl/BrowserFix";
 import { getFreeMemory, getTotalMemory } from "../impl/ClicornAPI";
 import { EventEmitter } from "../impl/EventEmitter";
 import { Account } from "../modules/auth/Account";
 import {
   AccountType,
   getPresentAccounts,
-  querySkinFor
+  querySkinFor,
 } from "../modules/auth/AccountUtil";
 import { prefetchData } from "../modules/auth/AJHelper";
 import { AuthlibAccount } from "../modules/auth/AuthlibAccount";
 import { LocalAccount } from "../modules/auth/LocalAccount";
-import {
-  ACCOUNT_EXPIRES_KEY,
-  ACCOUNT_LAST_REFRESHED_KEY,
-  MicrosoftAccount,
-  MS_LAST_USED_ACTOKEN_KEY,
-  MS_LAST_USED_REFRESH_KEY,
-  MS_LAST_USED_USERNAME_KEY,
-  MS_LAST_USED_UUID_KEY,
-  MS_LAST_USED_XUID_KEY
-} from "../modules/auth/MicrosoftAccount";
+import { MicrosoftAccount } from "../modules/auth/MicrosoftAccount";
 import { Pair } from "../modules/commons/Collections";
 import {
   PROCESS_END_GATE,
-  PROCESS_LOG_GATE
+  PROCESS_LOG_GATE,
 } from "../modules/commons/Constants";
 import { isNull } from "../modules/commons/Null";
 import {
   getBoolean,
   getNumber,
-  getString
+  getString,
 } from "../modules/config/ConfigSupport";
 import { getContainer } from "../modules/container/ContainerUtil";
 import { MinecraftContainer } from "../modules/container/MinecraftContainer";
 import {
   getWrapperStatus,
-  WrapperStatus
+  WrapperStatus,
 } from "../modules/download/DownloadWrapper";
 import {
   getAllJava,
@@ -87,7 +79,7 @@ import {
   getLegacyJDK,
   getNewJDK,
   parseJavaInfo,
-  parseJavaInfoRaw
+  parseJavaInfoRaw,
 } from "../modules/java/JavaInfo";
 import { autoMemory } from "../modules/launch/ArgsGenerator";
 import {
@@ -96,44 +88,39 @@ import {
   ensureClient,
   ensureLibraries,
   ensureLog4jFile,
-  ensureNatives
+  ensureNatives,
 } from "../modules/launch/Ensurance";
 import {
   launchProfile,
   markSafeLaunch,
-  shouldSafeLaunch
+  shouldSafeLaunch,
 } from "../modules/launch/LaunchTool";
 import { LaunchTracker } from "../modules/launch/LaunchTracker";
 import { GameProfile } from "../modules/profile/GameProfile";
 import {
   isProfileIsolated,
-  loadProfile
+  loadProfile,
 } from "../modules/profile/ProfileLoader";
-import {
-  dropAccountPromise,
-  waitMSAccountReady
-} from "../modules/readyboom/AccountMaster";
+import { waitMSAccountReady } from "../modules/readyboom/AccountMaster";
 import {
   setLastUsed,
-  waitProfileReady
+  waitProfileReady,
 } from "../modules/readyboom/PrepareProfile";
 import { jumpTo, setChangePageWarn, triggerSetPage } from "./GoTo";
 import { Icons } from "./Icons";
-import { ShiftEle } from "./Instruction";
 import { submitError, submitWarn } from "./Message";
 import { YNDialog } from "./OperatingHint";
 import {
   ALICORN_DEFAULT_THEME_DARK,
   ALICORN_DEFAULT_THEME_LIGHT,
-  isBgDark
+  isBgDark,
 } from "./Renderer";
 import { SkinDisplay2D, SkinDisplay3D } from "./SkinDisplay";
-import { addStatistics } from "./Statistics";
 import {
   AlicornTheme,
   fullWidth,
   useFormStyles,
-  useInputStyles
+  useInputStyles,
 } from "./Stylex";
 import { randsl, tr } from "./Translator";
 import { SpecialKnowledge } from "./Welcome";
@@ -148,7 +135,7 @@ const useStyles = makeStyles((theme: AlicornTheme) => ({
     fontSize: "0.9rem",
   },
   textSP: {
-    fontSize: sessionStorage.getItem("smallFontSize") || "1rem",
+    fontSize: cSessionStorage.getItem("smallFontSize") || "1rem",
     color: theme.palette.secondary.main,
   },
   text: {
@@ -506,79 +493,77 @@ function Launching(props: {
         }
       >
         <>
-          <ShiftEle name={"Launch"}>
-            <Fab
-              color={"primary"}
-              disabled={status !== LaunchingStatus.PENDING}
-              onClick={() => {
-                if (status === LaunchingStatus.PENDING) {
-                  if (reConfigureAccount) {
-                    localStorage.removeItem(
-                      ACCOUNT_CONFIGURED_KEY + profileHash.current
-                    );
+          <Fab
+            color={"primary"}
+            disabled={status !== LaunchingStatus.PENDING}
+            onClick={() => {
+              if (status === LaunchingStatus.PENDING) {
+                if (reConfigureAccount) {
+                  cLocalStorage.removeItem(
+                    ACCOUNT_CONFIGURED_KEY + profileHash.current
+                  );
+                }
+                // If account already configured then just continue
+                if (
+                  cLocalStorage.getItem(
+                    ACCOUNT_CONFIGURED_KEY + profileHash.current
+                  ) === "1"
+                ) {
+                  const accountMap: Record<string, Account> = {};
+                  for (const a of getPresentAccounts()) {
+                    const i = a.getAccountIdentifier();
+                    accountMap[i] = a;
                   }
-                  // If account already configured then just continue
-                  if (
-                    localStorage.getItem(
-                      ACCOUNT_CONFIGURED_KEY + profileHash.current
-                    ) === "1"
-                  ) {
-                    const accountMap: Record<string, Account> = {};
-                    for (const a of getPresentAccounts()) {
-                      const i = a.getAccountIdentifier();
-                      accountMap[i] = a;
-                    }
-                    const choice =
-                      localStorage.getItem(
-                        LAST_ACCOUNT_TAB_KEY + profileHash.current
-                      ) || "MZ";
-                    switch (choice) {
-                      case "MZ":
-                        selectedAccount = new MicrosoftAccount("");
-                        break;
-                      case "YG":
-                        {
-                          const la =
-                            localStorage.getItem(
-                              LAST_YG_ACCOUNT_NAME + profileHash.current
-                            ) || "";
-                          let ll = "";
-                          if (la && accountMap[la] !== undefined) {
-                            ll = la;
-                          }
-                          const sAccount =
-                            ll || Object.keys(accountMap.current).shift() || "";
-                          selectedAccount = accountMap[sAccount];
+                  const choice =
+                    cLocalStorage.getItem(
+                      LAST_ACCOUNT_TAB_KEY + profileHash.current
+                    ) || "MZ";
+                  switch (choice) {
+                    case "MZ":
+                      selectedAccount = new MicrosoftAccount("");
+                      break;
+                    case "YG":
+                      {
+                        const la =
+                          cLocalStorage.getItem(
+                            LAST_YG_ACCOUNT_NAME + profileHash.current
+                          ) || "";
+                        let ll = "";
+                        if (la && accountMap[la] !== undefined) {
+                          ll = la;
                         }
+                        const sAccount =
+                          ll || Object.keys(accountMap.current).shift() || "";
+                        selectedAccount = accountMap[sAccount];
+                      }
 
-                        break;
-                      case "AL":
-                        selectedAccount = new LocalAccount(
-                          localStorage.getItem(
-                            LAST_USED_USER_NAME_KEY + profileHash.current
-                          ) || "Player"
-                        );
-                        break;
-                      case "DM":
-                      default:
-                        // @ts-ignore
-                        selectedAccount = null;
-                    }
-                    if (selectedAccount) {
-                      setSelectedAccount(selectedAccount);
-                    }
+                      break;
+                    case "AL":
+                      selectedAccount = new LocalAccount(
+                        cLocalStorage.getItem(
+                          LAST_USED_USER_NAME_KEY + profileHash.current
+                        ) || "Player"
+                      );
+                      break;
+                    case "DM":
+                    default:
+                      // @ts-ignore
+                      selectedAccount = null;
                   }
-                  if (selectedAccount !== undefined) {
-                    start(selectedAccount);
-                  } else {
-                    setSelecting(true);
+                  if (selectedAccount) {
+                    setSelectedAccount(selectedAccount);
                   }
                 }
-              }}
-            >
-              {dry ? <FlashOn /> : <FlightTakeoff />}
-            </Fab>
-          </ShiftEle>
+                if (selectedAccount !== undefined) {
+                  start(selectedAccount);
+                } else {
+                  setSelecting(true);
+                }
+              }
+            }}
+          >
+            {dry ? <FlashOn /> : <FlightTakeoff />}
+          </Fab>
         </>
       </Tooltip>
       <br />
@@ -882,8 +867,7 @@ async function startBoot(
     window.dispatchEvent(new CustomEvent("GameQuit"));
     setStatus(LaunchingStatus.PENDING);
     window.dispatchEvent(new CustomEvent("MinecraftExitCleanUp"));
-    if (c !== "0" && c !== "SIGINT") {
-      addStatistics("Crash");
+    if (c !== "0" && c !== "SIGINT" && c != 0) {
       let crashReports: string[] = [];
       console.log(
         `Attention! Minecraft(${runID}) might not have run properly!`
@@ -933,8 +917,7 @@ async function startBoot(
       isolated: isolated,
     });
   }
-  addStatistics("Launch");
-  localStorage.setItem(LAST_SUCCESSFUL_GAME_KEY, window.location.hash);
+  cLocalStorage.setItem(LAST_SUCCESSFUL_GAME_KEY, window.location.hash);
   setLastUsed(container.id, profile.id);
   setStatus(LaunchingStatus.FINISHED);
   console.log(`A new Minecraft instance (${runID}) has been launched.`);
@@ -967,14 +950,14 @@ function AccountChoose(props: {
     },
   }))();
   const [choice, setChoice] = useState<"MZ" | "AL" | "YG" | "DM">(
-    (localStorage.getItem(LAST_ACCOUNT_TAB_KEY + props.profileHash) as
+    (cLocalStorage.getItem(LAST_ACCOUNT_TAB_KEY + props.profileHash) as
       | "MZ"
       | "AL"
       | "YG"
       | "DM") || "MZ"
   );
   const [pName, setName] = useState<string>(
-    localStorage.getItem(LAST_USED_USER_NAME_KEY + props.profileHash) ||
+    cLocalStorage.getItem(LAST_USED_USER_NAME_KEY + props.profileHash) ||
       "Player"
   );
   const [openForm, setOpenForm] = useState(false);
@@ -993,13 +976,8 @@ function AccountChoose(props: {
   }, [props.allAccounts]);
   const accountMap = useRef<Record<string, Account>>(accsMajor);
   const accountMapRev = useRef<Map<Account, string>>(accsRev);
-  const [msLogout, setMSLogout] = useState<
-    | "ReadyToLaunch.MSLogout"
-    | "ReadyToLaunch.MSLogoutRunning"
-    | "ReadyToLaunch.MSLogoutDone"
-  >("ReadyToLaunch.MSLogout");
   const la =
-    localStorage.getItem(LAST_YG_ACCOUNT_NAME + props.profileHash) || "";
+    cLocalStorage.getItem(LAST_YG_ACCOUNT_NAME + props.profileHash) || "";
   let ll = "";
   if (la && accountMap.current[la] !== undefined) {
     ll = la;
@@ -1059,7 +1037,7 @@ function AccountChoose(props: {
       }
       setSkinUrl("");
     })();
-  }, [sAccount, choice, msLogout, bufPName]);
+  }, [sAccount, choice, bufPName]);
 
   return (
     <ThemeProvider
@@ -1122,7 +1100,7 @@ function AccountChoose(props: {
               if (["MZ", "AL", "YG", "DM"].includes(e.target.value)) {
                 // @ts-ignore
                 setChoice(e.target.value);
-                localStorage.setItem(
+                cLocalStorage.setItem(
                   LAST_ACCOUNT_TAB_KEY + props.profileHash,
                   e.target.value
                 );
@@ -1179,41 +1157,6 @@ function AccountChoose(props: {
           ) : (
             ""
           )}
-          {choice === "MZ" ? (
-            <>
-              <Button
-                variant={"outlined"}
-                className={btnClasses.btn}
-                disabled={msLogout === "ReadyToLaunch.MSLogoutRunning"}
-                onClick={() => {
-                  void (() => {
-                    // @ts-ignore
-                    window[SESSION_ACCESSDATA_CACHED_KEY] = false;
-                    setMSLogout("ReadyToLaunch.MSLogoutRunning");
-                    window.localStorage.setItem(
-                      "MS.LoginWindowKey",
-                      "alicorn_ms_login_" + new Date().getTime()
-                    );
-                    dropAccountPromise();
-                    localStorage.setItem(MS_LAST_USED_REFRESH_KEY, "");
-                    localStorage.setItem(MS_LAST_USED_ACTOKEN_KEY, "");
-                    localStorage.setItem(MS_LAST_USED_UUID_KEY, "");
-                    localStorage.setItem(MS_LAST_USED_USERNAME_KEY, "");
-                    localStorage.setItem(MS_LAST_USED_XUID_KEY, "");
-                    localStorage.removeItem(ACCOUNT_EXPIRES_KEY); // Reset time
-                    localStorage.removeItem(ACCOUNT_LAST_REFRESHED_KEY);
-                    if (mounted.current) {
-                      setMSLogout("ReadyToLaunch.MSLogoutDone");
-                    }
-                  })();
-                }}
-              >
-                {tr(msLogout)}
-              </Button>
-            </>
-          ) : (
-            ""
-          )}
           {choice === "YG" ? (
             <>
               <FormControl variant={"outlined"}>
@@ -1229,7 +1172,7 @@ function AccountChoose(props: {
                   onChange={(e) => {
                     if (e.target.value) {
                       setAccount(String(e.target.value));
-                      localStorage.setItem(
+                      cLocalStorage.setItem(
                         LAST_YG_ACCOUNT_NAME + props.profileHash,
                         String(e.target.value)
                       );
@@ -1264,7 +1207,7 @@ function AccountChoose(props: {
             }
             onClick={async () => {
               props.closeFunc();
-              localStorage.setItem(
+              cLocalStorage.setItem(
                 ACCOUNT_CONFIGURED_KEY + props.profileHash,
                 "1"
               );
@@ -1291,7 +1234,7 @@ function AccountChoose(props: {
                   }
                   return;
                 case "AL":
-                  localStorage.setItem(
+                  cLocalStorage.setItem(
                     LAST_USED_USER_NAME_KEY + props.profileHash,
                     pName
                   );
@@ -1431,11 +1374,11 @@ function MiniJavaSelector(props: {
 }
 
 function setJavaForProfile(hash: string, jHome: string): void {
-  localStorage[GKEY + hash] = jHome;
+  cLocalStorage.setItem(GKEY + hash, jHome);
 }
 
 function getJavaAndCheckAvailable(hash: string, allowDefault = false): string {
-  const t = localStorage[GKEY + hash];
+  const t = cLocalStorage.getItem(GKEY + hash);
   if (typeof t === "string" && t.length > 0) {
     if (t === DEF) {
       if (allowDefault) {
@@ -1492,15 +1435,15 @@ function checkJMCompatibility(
 }
 
 function markReboot(hash: string): void {
-  sessionStorage.setItem(REBOOT_KEY_BASE + hash, "1");
+  cSessionStorage.setItem(REBOOT_KEY_BASE + hash, "1");
 }
 
 function clearReboot(hash: string): void {
-  sessionStorage.removeItem(REBOOT_KEY_BASE + hash);
+  cSessionStorage.removeItem(REBOOT_KEY_BASE + hash);
 }
 
 function isReboot(hash: string): boolean {
-  return sessionStorage.getItem(REBOOT_KEY_BASE + hash) === "1";
+  return cSessionStorage.getItem(REBOOT_KEY_BASE + hash) === "1";
 }
 
 const CODE_KEY = "Hoofoff.Code";

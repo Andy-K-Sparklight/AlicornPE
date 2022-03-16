@@ -4,6 +4,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { HashRouter } from "react-router-dom";
 import pkg from "../../package.json";
+import { cInit } from "../impl/BrowserFix";
 import { initClicornAPI, openExternal } from "../impl/ClicornAPI";
 import { initPaths, pathIsAbsolute } from "../impl/Path";
 import { reloadAccounts } from "../modules/auth/AccountUtil";
@@ -34,15 +35,14 @@ import { getMachineUniqueID } from "../modules/security/Unique";
 import { todayPing } from "../modules/selfupdate/Ping";
 import { App } from "./App";
 import { completeFirstRun } from "./FirstRunSetup";
-import { InstructionProvider } from "./Instruction";
 import { submitError, submitWarn } from "./Message";
-import { initStatistics } from "./Statistics";
 import { AL_THEMES } from "./ThemeColors";
 import { initTranslator, tr } from "./Translator";
 
 async function veryInit() {
   await initPaths();
   await initClicornAPI();
+  await cInit();
   initConfigPaths();
   initDataPaths();
   initJavaInfo();
@@ -145,7 +145,6 @@ async function veryInit() {
       // Essential works and light works
       await Promise.allSettled([initEncrypt()]);
       initDownloadWrapper();
-      initStatistics();
       // Normal works
       await Promise.allSettled([
         (async () => {
@@ -213,8 +212,6 @@ async function veryInit() {
 
 function configureFontSize(): void {
   const f = "0.875rem";
-  console.log("Set small font size as " + f);
-  sessionStorage.setItem("smallFontSize", f);
   let e: HTMLStyleElement | null = document.createElement("style");
   e.innerText = `.smtxt{font-size:${f} !important;}`;
   document.head.insertAdjacentElement("beforeend", e);
@@ -356,56 +353,54 @@ function RendererBootstrap(): JSX.Element {
           getString("theme.secondary.light") || "#" + getTheme()[3],
       }}
     >
-      <InstructionProvider>
-        <ThemeProvider theme={ALICORN_DEFAULT_THEME_DARK}>
-          <HashRouter>
-            <App />
-          </HashRouter>
-          {getString("theme") === "Random" ? (
-            <Typography
-              sx={{
-                pointerEvents: "none",
-                position: "fixed",
-                left: "0.3125rem",
-                bottom: "0.3125rem",
-              }}
-              color={"textPrimary"}
-            >
-              {AL_THEMES["Random"].join(",")}
-            </Typography>
-          ) : (
-            ""
-          )}
-
+      <ThemeProvider theme={ALICORN_DEFAULT_THEME_DARK}>
+        <HashRouter>
+          <App />
+        </HashRouter>
+        {getString("theme") === "Random" ? (
           <Typography
             sx={{
               pointerEvents: "none",
               position: "fixed",
-              right: "0.3125rem",
+              left: "0.3125rem",
               bottom: "0.3125rem",
             }}
-            color={"primary"}
+            color={"textPrimary"}
           >
-            {"Alicorn " + pkg.appVersion + " #" + pkg.updatorVersion}
+            {AL_THEMES["Random"].join(",")}
           </Typography>
-          <div
-            style={{
-              position: "fixed",
-              left: 0,
-              right: 0,
-              pointerEvents: "none",
-              top: 0,
-              bottom: 0,
-              opacity: getNumber("theme.background.opacity") / 100,
-              backgroundImage: url ? `url(${url || ""})` : undefined,
-              backgroundRepeat: "no-repeat",
-              backgroundSize: "cover",
-              backgroundColor: "transparent",
-              backgroundPosition: "center",
-            }}
-          />
-        </ThemeProvider>
-      </InstructionProvider>
+        ) : (
+          ""
+        )}
+
+        <Typography
+          sx={{
+            pointerEvents: "none",
+            position: "fixed",
+            right: "0.3125rem",
+            bottom: "0.3125rem",
+          }}
+          color={"primary"}
+        >
+          {"Alicorn " + pkg.appVersion + " #" + pkg.updatorVersion}
+        </Typography>
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            pointerEvents: "none",
+            top: 0,
+            bottom: 0,
+            opacity: getNumber("theme.background.opacity") / 100,
+            backgroundImage: url ? `url(${url || ""})` : undefined,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "cover",
+            backgroundColor: "transparent",
+            backgroundPosition: "center",
+          }}
+        />
+      </ThemeProvider>
     </Box>
   );
 }

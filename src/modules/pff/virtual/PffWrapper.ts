@@ -1,3 +1,4 @@
+import { cSessionStorage } from "../../../impl/BrowserFix";
 import { remove } from "../../../impl/ClicornAPI";
 import { copyFileRW } from "../../commons/FileUtil";
 import { getString } from "../../config/ConfigSupport";
@@ -207,5 +208,5 @@ const PFF_FLAG = "Downloader.IsPff";
 // 1 - Use pff config
 // Any other value - Use common config
 export function setPffFlag(value: string): void {
-  sessionStorage.setItem(PFF_FLAG, value);
+  cSessionStorage.setItem(PFF_FLAG, value);
 }

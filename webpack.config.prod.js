@@ -1,6 +1,8 @@
 const path = require("path");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
 const { ContextReplacementPlugin, BannerPlugin } = require("webpack");
+const Html = require("html-webpack-plugin");
+const Inline = require("html-inline-script-webpack-plugin");
 
 module.exports = {
   entry: {
@@ -22,11 +24,6 @@ module.exports = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
-    alias: {
-      react: "preact/compat",
-      "react-dom/test-utils": "preact/test-utils",
-      "react-dom": "preact/compat",
-    },
   },
   plugins: [
     new ContextReplacementPlugin(/keyv/),
@@ -44,6 +41,11 @@ module.exports = {
       entryOnly: true,
       include: ["Renderer"],
     }),
+    new Html({
+      filename: "Renderer.html",
+      template: "resources/build/Renderer.html",
+    }),
+    new Inline(),
   ],
   externals: { "util/types": "commonjs util/types" },
   mode: "production",
