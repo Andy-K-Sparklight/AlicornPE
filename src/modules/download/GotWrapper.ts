@@ -1,9 +1,6 @@
 import { netGet } from "../../impl/ClicornAPI";
-import { expose } from "../boticorn/FTable";
 import { getNumber } from "../config/ConfigSupport";
 import { applyMirror } from "./Mirror";
-
-expose({ xgot, pgot });
 
 export async function xgot(
   url: string,

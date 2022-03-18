@@ -1,11 +1,8 @@
 import { cSessionStorage } from "../impl/BrowserFix";
-import { expose } from "../modules/boticorn/FTable";
 import { getBoolean, saveAndReloadMain } from "../modules/config/ConfigSupport";
 import { loadMirror } from "../modules/download/Mirror";
 import { intervalSaveData } from "./App";
 import { setContainerListDirty } from "./ContainerManager";
-
-expose({ jumpTo, triggerSetPage });
 
 const PAGES_HISTORY: string[] = [];
 const TITLE_HISTORY: string[] = [];

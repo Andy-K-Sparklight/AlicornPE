@@ -36,7 +36,6 @@ import { makeStyles } from "@mui/styles";
 import React, { useEffect, useRef, useState } from "react";
 import { Route } from "react-router-dom";
 import { cSync } from "../impl/BrowserFix";
-import { expose } from "../modules/boticorn/FTable";
 import { safeGet } from "../modules/commons/Null";
 import { getString, saveConfig } from "../modules/config/ConfigSupport";
 import { saveGDT } from "../modules/container/ContainerUtil";
@@ -67,8 +66,6 @@ import { UtilitiesIndex } from "./utilities/UtilitiesIndex";
 import { VersionView } from "./VersionView";
 import { Welcome } from "./Welcome";
 import { YggdrasilAccountManager } from "./YggdrasilAccountManager";
-
-expose({ exitApp });
 
 const useStyles = makeStyles((theme: AlicornTheme) => ({
   root: {

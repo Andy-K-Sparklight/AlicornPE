@@ -1,9 +1,6 @@
 import { appendFile, closeFile, netGet } from "../../impl/ClicornAPI";
-import { expose } from "../boticorn/FTable";
 import { getNumber } from "../config/ConfigSupport";
 import { MirrorChain } from "./Mirror";
-
-expose({ isWebFileExist });
 
 export function getTimeoutController(
   timeout: number
