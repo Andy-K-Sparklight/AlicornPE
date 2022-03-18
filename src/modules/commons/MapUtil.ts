@@ -39,7 +39,7 @@ function manualParse(source: string): boolean | number | string {
   }
 
   const floatParse = parseFloat(source);
-  if (!isNaN(floatParse)) {
+  if (floatParse.toString() === source) {
     return floatParse;
   }
   return source;

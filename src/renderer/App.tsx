@@ -35,6 +35,7 @@ import {
 import { makeStyles } from "@mui/styles";
 import React, { useEffect, useRef, useState } from "react";
 import { Route } from "react-router-dom";
+import { cSync } from "../impl/BrowserFix";
 import { expose } from "../modules/boticorn/FTable";
 import { safeGet } from "../modules/commons/Null";
 import { getString, saveConfig } from "../modules/config/ConfigSupport";
@@ -597,6 +598,7 @@ function remoteCloseWindow(): void {
 
 export async function intervalSaveData(): Promise<void> {
   await saveConfig();
+  await cSync();
   await saveGDT();
   await saveJDT();
   await saveVF();

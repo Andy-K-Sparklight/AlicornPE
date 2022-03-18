@@ -42,9 +42,9 @@ import { initTranslator, tr } from "./Translator";
 async function veryInit() {
   await initPaths();
   await initClicornAPI();
-  await cInit();
   initConfigPaths();
   initDataPaths();
+  await cInit();
   initJavaInfo();
 }
 

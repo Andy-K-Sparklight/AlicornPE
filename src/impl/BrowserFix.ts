@@ -30,7 +30,7 @@ export async function cInit() {
     }
   } catch {}
 }
-async function _sync() {
+export async function cSync() {
   try {
     const f = await openFile(getActualDataPath("cLocalStorage.ald"), "w");
     const dat = buildMap(_cLocalStorage, "@@BF_CLICORN@@");
@@ -41,7 +41,6 @@ async function _sync() {
 const cLocalStorage = {
   setItem(k: string, v: unknown): void {
     _cLocalStorage.set(k, String(v));
-    void _sync();
   },
   getItem(k: string): string | null {
     const v = _cLocalStorage.get(k);
@@ -52,7 +51,6 @@ const cLocalStorage = {
   },
   removeItem(k: string): void {
     _cLocalStorage.delete(k);
-    void _sync();
   },
 };
 

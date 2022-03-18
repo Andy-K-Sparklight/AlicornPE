@@ -44,6 +44,7 @@ export class MicrosoftAccount extends Account {
     this.lastUsedUsername =
       cLocalStorage.getItem(MS_LAST_USED_USERNAME_KEY) || "";
     this.lastUsedUUID = cLocalStorage.getItem(MS_LAST_USED_UUID_KEY) || "";
+    console.log("Last Used UUID: " + this.lastUsedUUID); // FIXME: parsed as number wrong!
     this.lastUsedAccessToken = decrypt2(
       cLocalStorage.getItem(MS_LAST_USED_ACTOKEN_KEY) || ""
     );
@@ -122,13 +123,11 @@ export class MicrosoftAccount extends Account {
     try {
       console.log("Getting code...");
       const code = await browserGetCode(quiet);
-      console.log("CODE: " + code);
       if (code.trim().length === 0) {
         return false;
       }
       console.log("Code -> Token");
       const r = await getTokenByCode(code);
-      console.log("SUCC: " + r.success);
       if (!r.success) {
         return false;
       }
